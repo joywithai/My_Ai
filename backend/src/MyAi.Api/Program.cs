@@ -56,7 +56,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
     }));
 
 // ── auth: RS256 (README §3.4) — RSA key loaded once at startup ──
-var holder = new RsaSigningKeyHolder(builder.Environment);
+var holder = new RsaSigningKeyHolder(builder.Environment.ContentRootPath);
 builder.Services.AddSingleton(holder);
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

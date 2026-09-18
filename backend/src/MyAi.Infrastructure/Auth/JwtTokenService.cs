@@ -56,8 +56,8 @@ public class RsaSigningKeyHolder
     public RSA PrivateRsa { get; }
     public RSAParameters PublicParameters { get; }
 
-    public RsaSigningKeyHolder(Microsoft.AspNetCore.Hosting.IWebHostEnvironment env)
+    public RsaSigningKeyHolder(string contentRootPath)
     {
-        (PrivateRsa, PublicParameters) = RsaJwtKeys.LoadOrCreate(env.ContentRootPath);
+        (PrivateRsa, PublicParameters) = RsaJwtKeys.LoadOrCreate(contentRootPath);
     }
 }
