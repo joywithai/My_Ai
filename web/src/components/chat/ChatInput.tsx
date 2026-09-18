@@ -2,6 +2,7 @@
 import { KeyboardEvent, useRef, useState } from "react";
 import { SendHorizonal, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 const MAX = 500;
 
@@ -20,6 +21,7 @@ export default function ChatInput({
 }) {
   const [text, setText] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const t = useT();
 
   const submit = () => {
     const t = text.trim();
@@ -67,7 +69,7 @@ export default function ChatInput({
               e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
             }}
             onKeyDown={onKeyDown}
-            placeholder={lang === "bn" ? "কিছু লিখো…" : "Type a message…"}
+            placeholder={t("typeMessage")}
             className="input-dark max-h-[120px] resize-none pr-14"
           />
           <span className="pointer-events-none absolute bottom-2.5 right-3 text-[10px] text-muted">

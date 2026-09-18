@@ -39,8 +39,12 @@ export default function AvatarStage({
     let greetTimer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false; // StrictMode double-mount guard
 
+    // selected avatar model (female default focus; male optional) with fallback
+    const wantsMale = mode !== "landing" && useSettings.getState().settings.avatarModelId === "avatar-male";
+    const file = wantsMale ? "/models/avatar-male.vrm" : "/models/avatar.vrm";
     engine
-      .load("/models/avatar.vrm", setProgress)
+      .load(file, setProgress)
+      .catch(() => engine.load("/models/avatar.vrm", setProgress))
       .then(() => {
         if (cancelled) return;
         setReady(true);

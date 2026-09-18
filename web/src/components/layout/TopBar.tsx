@@ -4,15 +4,27 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Settings, LogOut, Crown, ShieldCheck, UserRound, ChevronDown } from "lucide-react";
 import { useAuth } from "@/lib/store/auth";
+import { useSettings } from "@/lib/store/settings";
 import { ROLE_LABEL } from "@/lib/types";
 import { Badge } from "@/components/ui/primitives";
+import { useT } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 export default function TopBar() {
   const user = useAuth((s) => s.user);
   const logout = useAuth((s) => s.logout);
+  const refresh = useAuth((s) => s.refresh);
   const router = useRouter();
+  const t = useT();
+  const uiLang = useSettings((s) => s.settings.uiLanguage ?? "en");
+  const patch = useSettings((s) => s.patch);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -36,10 +48,24 @@ export default function TopBar() {
       </Link>
 
       <div className="flex items-center gap-2.5">
+        <div className="flex overflow-hidden rounded-xl border border-line">
+          {(["en", "bn"] as const).map((l) => (
+            <button
+              key={l}
+              onClick={() => patch({ uiLanguage: l })}
+              className={cn(
+                "px-2.5 py-1.5 text-[11px] font-bold transition-all",
+                uiLang === l ? "bg-accent text-[#16101f]" : "text-muted hover:text-txt"
+              )}
+            >
+              {l.toUpperCase()}
+            </button>
+          ))}
+        </div>
         <Link
           href="/settings"
           className="flex h-9 w-9 items-center justify-center rounded-xl border border-line text-txt/80 transition hover:bg-white/5 hover:text-accent"
-          title="সেটিংস"
+          title={t("settings")}
         >
           <Settings size={17} />
         </Link>
@@ -76,7 +102,7 @@ export default function TopBar() {
               <div className="my-1 h-px bg-line" />
               <MenuItem
                 icon={<LogOut size={14} />}
-                label="লগআউট"
+                label={t("logout")}
                 danger
                 onClick={() => {
                   setOpen(false);

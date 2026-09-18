@@ -10,32 +10,40 @@ import { useAuth } from "@/lib/store/auth";
 import { useSettings } from "@/lib/store/settings";
 import { useChat } from "@/lib/store/chat";
 import { useUi } from "@/lib/store/framing";
+import { api } from "@/lib/api";
 import { getEngine } from "@/lib/engine/AvatarEngine";
 import { buildSpeakTimeline } from "@/lib/engine/lipsync";
-import { sendMockMessage } from "@/lib/mock/chatService";
 import { demoSpeak, demoSpeakStop } from "@/lib/speak";
+import { useT } from "@/lib/i18n";
+import type { ExpressionSegment } from "@/lib/types";
 
 interface Sub {
   text: string;
   expression: string;
 }
 
+/** charIndex lookup table for segment sync with real audio boundaries */
+function segmentOffsets(segs: ExpressionSegment[]) {
+  let acc = 0;
+  return segs.map((s) => {
+    const start = acc;
+    acc += s.text.length + 1;
+    return { start, end: acc, seg: s };
+  });
+}
+
 export default function ChatPage() {
   const router = useRouter();
+  const t = useT();
   const [mounted, setMounted] = useState(false);
   const user = useAuth((s) => s.user);
   const settings = useSettings((s) => s.settings);
-  const flags = useSettings((s) => s.flags);
-  const showToast = useUi((s) => s.showToast);
 
-  const ensureConversation = useChat((s) => s.ensureConversation);
   const addMessage = useChat((s) => s.addMessage);
-  const bumpDaily = useChat((s) => s.bumpDaily);
 
   const [busy, setBusy] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [sub, setSub] = useState<Sub | null>(null);
-  const subTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const greetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => setMounted(true), []);
@@ -45,69 +53,88 @@ export default function ChatPage() {
 
   // greeting subtitle after avatar loads
   const onAvatarLoaded = useCallback(() => {
-    const bn = settings.language === "bn";
-    setSub({ text: bn ? "নমস্কার! আমি MyAi 👋" : "Hello! I'm MyAi 👋", expression: "happy" });
+    setSub({ text: t("welcome") + " 👋", expression: "happy" });
     greetTimer.current = setTimeout(() => setSub(null), 2600);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.language]);
+  }, [settings.uiLanguage]);
 
   const handleSend = useCallback(
     async (text: string) => {
       if (busy || !user) return;
       const lang = settings.language;
-      const roleFlags = flags[user.role];
-      const todayCount = useChat.getState().dailyCount;
-      if (roleFlags.maxMessagesPerDay >= 0 && todayCount >= roleFlags.maxMessagesPerDay) {
-        showToast(
-          lang === "bn"
-            ? `আজকের লিমিট শেষ (${roleFlags.maxMessagesPerDay})! সাবস্ক্রাইব করলে বেশি কথা বলা যাবে 🚀`
-            : `Daily limit reached (${roleFlags.maxMessagesPerDay})! Subscribe for more 🚀`,
-          "info"
-        );
-        return;
-      }
-
-      const convId = ensureConversation(lang);
-      addMessage({ conversationId: convId, role: "user", content: text, language: lang });
-      bumpDaily();
-
-      // thinking phase — eyes up + ??? bubbles, avatar stays locked
       setBusy(true);
       setThinking(true);
       setSub(null);
       const engine = getEngine();
       engine.setState("thinking");
 
-      const result = await sendMockMessage(text, lang);
-      const fullText = result.segments.map((s) => s.text).join(" ");
-      const timeline = buildSpeakTimeline(result.segments, lang);
+      try {
+        const result = await api<{ conversationId: string; segments: ExpressionSegment[]; usage: { count: number; limit: number } }>(
+          "/chat",
+          { method: "POST", json: { message: text, lang, conversationId: useChat.getState().currentId ?? undefined } }
+        );
+        useChat.setState({ currentId: result.conversationId });
 
-      engine.onSegment = (idx) => {
-        const seg = timeline.segs[idx];
-        if (seg) setSub({ text: seg.text, expression: seg.expr });
-      };
-      engine.onDone = () => {
+        const fullText = result.segments.map((s) => s.text).join(" ");
+        const timeline = buildSpeakTimeline(result.segments, lang);
+        const offsets = segmentOffsets(result.segments);
+
+        engine.onSegment = (idx) => {
+          const seg = result.segments[idx];
+          if (seg) setSub({ text: seg.text, expression: seg.expression });
+        };
+        engine.onDone = () => {
+          setBusy(false);
+          setThinking(false);
+          setSub(null);
+        };
+
+        // speak phase — mouth driven by real audio boundary events
+        setThinking(false);
+        engine.speakWithTimeline(timeline);
+        if (settings.demoVoiceOn && settings.autoPlayAudio) {
+          const ok = demoSpeak(fullText, lang, settings.voiceSpeed, settings.voicePitch, {
+            onBoundary: (charIndex) => {
+              const hit = offsets.find((o) => charIndex >= o.start && charIndex < o.end);
+              if (hit) setSub({ text: hit.seg.text, expression: hit.seg.expression });
+            },
+            onEnd: () => {
+              /* engine finishes via timeline */
+            },
+          });
+          if (!ok) {
+            // no TTS available → fallback: run timeline mouth only
+            engine.boundaryMode = false;
+          }
+        }
+
+        addMessage({
+          conversationId: result.conversationId,
+          role: "assistant",
+          content: fullText,
+          language: lang,
+          segments: result.segments,
+        });
+      } catch (e: any) {
         setBusy(false);
         setThinking(false);
-        setSub(null);
-      };
-
-      // speak phase
-      setThinking(false);
-      engine.speakWithTimeline(timeline);
-      if (settings.demoVoiceOn && settings.autoPlayAudio) {
-        demoSpeak(fullText, lang, settings.voiceSpeed, settings.voicePitch);
+        if (e?.status === 429) {
+          useUi.getState().showToast(
+            settings.uiLanguage === "bn"
+              ? `আজকের লিমিট শেষ (${e.data?.limit})! সাবস্ক্রাইব করলে বেশি কথা বলা যাবে 🚀`
+              : `Daily limit reached (${e.data?.limit})! Subscribe for more 🚀`,
+            "info"
+          );
+        } else if (e?.status === 403 && e?.data?.error === "banned") {
+          useUi.getState().showToast("Account banned", "err");
+          useAuth.getState().logout();
+          router.replace("/");
+        } else {
+          useUi.getState().showToast("Something went wrong — try again", "err");
+        }
       }
-
-      addMessage({
-        conversationId: convId,
-        role: "assistant",
-        content: fullText,
-        language: lang,
-        segments: result.segments,
-      });
     },
-    [busy, user, settings, flags, ensureConversation, addMessage, bumpDaily, showToast]
+    [busy, user, settings, addMessage, router]
   );
 
   const handleStop = useCallback(() => {
@@ -119,12 +146,28 @@ export default function ChatPage() {
     setSub(null);
   }, []);
 
-  // deep-link: /chat?c=<conversationId>
+  // deep-link: /chat?c=<conversationId> → load messages from server
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || !user) return;
     const c = new URLSearchParams(window.location.search).get("c");
-    if (c) useChat.getState().setCurrent(c);
-  }, [mounted]);
+    if (c) {
+      api<{ conversation: any; messages: any[] }>(`/conversations/${c}`)
+        .then((res) => {
+          useChat.setState({ currentId: c, messages: [] });
+          for (const m of res.messages) {
+            useChat.getState().addMessage({
+              conversationId: c,
+              role: m.role,
+              content: m.content,
+              language: m.lang ?? settings.language,
+              segments: m.segments ?? [],
+            });
+          }
+        })
+        .catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, user]);
 
   if (!mounted || !user) return <div className="h-dvh bg-bg" />;
 
@@ -138,31 +181,22 @@ export default function ChatPage() {
           <AvatarStage mode="chat" onLoaded={onAvatarLoaded} />
         </div>
 
-        {/* ??? bubbles while thinking */}
         {thinking && <ThinkingBubbles />}
 
-        {/* thinking pill — overlay, no layout shift */}
         {thinking && (
           <div className="pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2">
             <div className="glass flex items-center gap-1.5 rounded-full px-4 py-2">
               <span className="thinking-dot h-1.5 w-1.5 rounded-full bg-accent" />
               <span className="thinking-dot h-1.5 w-1.5 rounded-full bg-accent" />
               <span className="thinking-dot h-1.5 w-1.5 rounded-full bg-accent" />
-              <span className="ml-1 text-[11px] text-muted">
-                {settings.language === "bn" ? "ভাবছি…" : "thinking…"}
-              </span>
+              <span className="ml-1 text-[11px] text-muted">{t("thinking")}</span>
             </div>
           </div>
         )}
 
-        {/* subtitles — overlay above the input, avatar locked */}
         {settings.showSubtitles && (
           <div className="absolute inset-x-0 bottom-5 z-10">
-            <Subtitles
-              text={sub?.text ?? ""}
-              expression={sub?.expression}
-              visible={!!sub}
-            />
+            <Subtitles text={sub?.text ?? ""} expression={sub?.expression} visible={!!sub} />
           </div>
         )}
       </div>

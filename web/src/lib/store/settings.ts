@@ -10,10 +10,12 @@ import {
   Role,
   UserSettings,
 } from "../types";
+import { getToken } from "../api";
 
 interface SettingsState {
   settings: UserSettings;
   flags: Record<Role, FeatureFlags>;
+  hydrateFromServer: (s: Partial<UserSettings>) => void;
   patch: (p: Partial<UserSettings>) => void;
   setExpression: (e: string) => void;
   toggleAnimation: (name: string) => void;
@@ -32,10 +34,22 @@ interface SettingsState {
 
 export const useSettings = create<SettingsState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       settings: { ...DEFAULT_SETTINGS },
       flags: { ...DEFAULT_FLAGS },
-      patch: (p) => set((s) => ({ settings: { ...s.settings, ...p } })),
+      hydrateFromServer: (srv) => set((s) => ({ settings: { ...s.settings, ...srv } })),
+      patch: (p) => {
+        set((s) => ({ settings: { ...s.settings, ...p } }));
+        // best-effort server mirror
+        const token = getToken();
+        if (token) {
+          fetch("/api/settings", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify(p),
+          }).catch(() => {});
+        }
+      },
       setExpression: (e) => set((s) => ({ settings: { ...s.settings, defaultExpression: e } })),
       toggleAnimation: (name) =>
         set((s) => {
@@ -70,10 +84,11 @@ export const useSettings = create<SettingsState>()(
     }),
     {
       name: "myai.settings",
-      version: 1,
-      migrate: () => ({
-        settings: { ...DEFAULT_SETTINGS },
-        flags: { ...DEFAULT_FLAGS },
+      version: 2,
+      migrate: (state: any) => ({
+        ...state,
+        settings: { ...DEFAULT_SETTINGS, ...(state?.settings ?? {}) },
+        flags: { ...DEFAULT_FLAGS, ...(state?.flags ?? {}) },
       }),
     }
   )

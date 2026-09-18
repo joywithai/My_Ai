@@ -5,13 +5,15 @@ import { useEffect, useState } from "react";
 import AvatarStage from "@/components/avatar/AvatarStage";
 import { useAuth } from "@/lib/store/auth";
 import { useSettings } from "@/lib/store/settings";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export default function LandingPage() {
   const user = useAuth((s) => s.user);
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const language = useSettings((s) => s.settings.language);
+  const t = useT();
+  const uiLang = useSettings((s) => s.settings.uiLanguage ?? "en");
   const patch = useSettings((s) => s.patch);
 
   useEffect(() => setMounted(true), []);
@@ -37,13 +39,13 @@ export default function LandingPage() {
         </div>
 
         <div className="flex overflow-hidden rounded-xl border border-line">
-          {(["bn", "en"] as const).map((l) => (
+          {(["en", "bn"] as const).map((l) => (
             <button
               key={l}
-              onClick={() => patch({ language: l })}
+              onClick={() => patch({ uiLanguage: l })}
               className={cn(
                 "px-3 py-2 text-xs font-bold transition-all",
-                language === l ? "bg-accent text-[#16101f]" : "text-muted hover:text-txt"
+                uiLang === l ? "bg-accent text-[#16101f]" : "text-muted hover:text-txt"
               )}
             >
               {l.toUpperCase()}
@@ -59,10 +61,10 @@ export default function LandingPage() {
         {/* login / signup — bottom center, on the frame */}
         <div className="absolute inset-x-0 bottom-5 z-20 flex items-center justify-center gap-2.5">
           <Link href="/register" className="btn-ghost !px-5 !py-2.5 text-xs backdrop-blur-md">
-            সাইনআপ
+            {t("signup")}
           </Link>
           <Link href="/login" className="btn-primary !px-6 !py-2.5 text-xs">
-            লগইন
+            {t("login")}
           </Link>
         </div>
       </div>

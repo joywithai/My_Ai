@@ -2,18 +2,27 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/store/auth";
-import { uid } from "@/lib/utils";
-import { AuthShell, RolePicker, DemoRole } from "@/components/auth/AuthShell";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { useT } from "@/lib/i18n";
+import { useUi } from "@/lib/store/framing";
+import { cn } from "@/lib/utils";
 
-/** Full-page login (demo) */
+const DEMO = [
+  { email: "admin@demo.com", pass: "admin123", label: "Admin" },
+  { email: "sub@demo.com", pass: "sub12345", label: "Subscriber" },
+  { email: "public@demo.com", pass: "public123", label: "Public" },
+];
+
 export default function LoginPage() {
   const router = useRouter();
+  const t = useT();
   const user = useAuth((s) => s.user);
   const login = useAuth((s) => s.login);
+  const showToast = useUi((s) => s.showToast);
   const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
-  const [role, setRole] = useState<DemoRole>("public_user");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => setMounted(true), []);
   useEffect(() => {
@@ -22,15 +31,19 @@ export default function LoginPage() {
 
   if (!mounted || user) return <div className="h-dvh bg-bg" />;
 
-  const submit = () => {
-    const e = email.trim() || "demo@myai.app";
-    login({
-      id: uid("u"),
-      name: e.split("@")[0] || "Guest",
-      email: e,
-      role,
-    });
-    router.push("/chat");
+  const submit = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await login(email.trim(), pass);
+      router.push("/chat");
+    } catch (e: any) {
+      setBusy(false);
+      showToast(
+        e?.data?.error === "banned" ? "This account is banned" : "Wrong email or password",
+        "err"
+      );
+    }
   };
 
   return (
@@ -38,29 +51,43 @@ export default function LoginPage() {
       <div className="space-y-2.5">
         <input
           className="input-dark"
-          placeholder="ইমেইল"
+          placeholder={t("email")}
           type="email"
           value={email}
           onChange={(ev) => setEmail(ev.target.value)}
         />
         <input
           className="input-dark"
-          placeholder="পাসওয়ার্ড"
+          placeholder={t("password")}
           type="password"
           value={pass}
           onChange={(ev) => setPass(ev.target.value)}
           onKeyDown={(ev) => ev.key === "Enter" && submit()}
         />
       </div>
-      <div className="mt-3">
-        <RolePicker role={role} setRole={setRole} />
-      </div>
-      <button onClick={submit} className="btn-primary mt-4 w-full">
-        লগইন করো →
+      <button onClick={submit} disabled={busy} className="btn-primary mt-4 w-full">
+        {busy ? "…" : t("signIn")}
       </button>
-      <p className="mt-2.5 text-center text-[10.5px] text-muted">
-        ডেমোতে যেকোনো ইমেইল/পাসওয়ার্ড চলবে
-      </p>
+      <div className="mt-4">
+        <p className="mb-1.5 text-[10.5px] uppercase tracking-wide text-muted">{t("demoAccounts")}</p>
+        <div className="grid grid-cols-3 gap-1.5">
+          {DEMO.map((d) => (
+            <button
+              key={d.email}
+              type="button"
+              onClick={() => {
+                setEmail(d.email);
+                setPass(d.pass);
+              }}
+              className={cn(
+                "rounded-lg border border-line px-2 py-2 text-[11px] font-semibold text-muted transition hover:border-accent/40 hover:text-accent"
+              )}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </AuthShell>
   );
 }

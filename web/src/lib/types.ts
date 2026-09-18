@@ -61,6 +61,8 @@ export interface FeatureFlags {
 
 export interface UserSettings {
   language: "bn" | "en";
+  uiLanguage: "bn" | "en";
+  avatarModelId: string;
   voiceName: string;
   voiceSpeed: number; // 0.50 - 2.00
   voicePitch: number; // -50 - +50
@@ -137,6 +139,8 @@ export const DEFAULT_FLAGS: Record<Role, FeatureFlags> = {
 
 export const DEFAULT_SETTINGS: UserSettings = {
   language: "bn",
+  uiLanguage: "en",
+  avatarModelId: "avatar-female",
   voiceName: "bn-BD-NabanitaNeural",
   voiceSpeed: 1.0,
   voicePitch: 0,

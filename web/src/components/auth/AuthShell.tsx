@@ -1,8 +1,6 @@
 "use client";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
-
-export type DemoRole = "admin" | "subscriber" | "public_user";
+import { useT } from "@/lib/i18n";
 
 /** Shared shell for /login and /register pages */
 export function AuthShell({
@@ -12,6 +10,7 @@ export function AuthShell({
   kind: "login" | "register";
   children: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col justify-center px-4 py-8">
       <div className="mb-6 text-center">
@@ -22,9 +21,7 @@ export function AuthShell({
           My<span className="text-accent">Ai</span>
         </h1>
         <p className="mt-1 text-xs text-muted">
-          {kind === "login"
-            ? "তোমার AI avatar অপেক্ষা করছে…"
-            : "নতুন অ্যাকাউন্ট খুলে শুরু করো"}
+          {kind === "login" ? "Your AI avatar is waiting…" : "Create a new account to get started"}
         </p>
       </div>
 
@@ -33,56 +30,23 @@ export function AuthShell({
       <p className="mt-4 text-center text-xs text-muted">
         {kind === "login" ? (
           <>
-            অ্যাকাউন্ট নেই?{" "}
+            {t("noAccount")}{" "}
             <Link href="/register" className="font-semibold text-accent hover:underline">
-              সাইনআপ করো
+              {t("signup")}
             </Link>
           </>
         ) : (
           <>
-            আগে থেকেই অ্যাকাউন্ট আছে?{" "}
+            {t("haveAccount")}{" "}
             <Link href="/login" className="font-semibold text-accent hover:underline">
-              লগইন করো
+              {t("login")}
             </Link>
           </>
         )}
       </p>
       <Link href="/" className="mx-auto mt-3 text-[11px] text-muted hover:text-txt">
-        ← ফিরে যাও
+        ← {t("back")}
       </Link>
     </main>
-  );
-}
-
-export function RolePicker({
-  role,
-  setRole,
-}: {
-  role: DemoRole;
-  setRole: (r: DemoRole) => void;
-}) {
-  return (
-    <div>
-      <p className="mb-1.5 text-[11px] text-muted">
-        ডেমো রোল (যে রোল দিয়ে ঢুকবে সেই ফিচারগুলো দেখা যাবে):
-      </p>
-      <div className="grid grid-cols-3 gap-1.5">
-        {(["admin", "subscriber", "public_user"] as DemoRole[]).map((r) => (
-          <button
-            key={r}
-            type="button"
-            onClick={() => setRole(r)}
-            className={cn(
-              "rounded-lg border py-2 text-[11.5px] font-semibold transition-all",
-              role === r
-                ? "border-accent/60 bg-accent-dim text-accent"
-                : "border-line text-muted hover:text-txt"
-            )}
-          >
-            {r === "admin" ? "Admin" : r === "subscriber" ? "Subscriber" : "Public"}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }

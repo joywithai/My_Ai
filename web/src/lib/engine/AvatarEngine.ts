@@ -34,6 +34,8 @@ export class AvatarEngine {
 
   defaultExpression = "relaxed";
 
+  /** real-audio lip-sync mode (set true on first boundary event) */
+  boundaryMode = false;
   /** debug: disable greeting wave overlay while tuning */
   debugFreezeWave = false;
 
@@ -253,7 +255,35 @@ export class AvatarEngine {
     this.tlStart = performance.now();
     this.tlIdx = 0;
     this.segIdx = -1;
+    this.boundaryMode = false; // timeline-driven until first real boundary event
     this.setState("speaking");
+  }
+
+  /**
+   * Live viseme input — driven by real audio events (Web Speech `onboundary`
+   * in demo, Edge-TTS word boundaries in the backend). 100% audio-synced.
+   */
+  setViseme(weights: Partial<Record<Viseme, number>>) {
+    this.boundaryMode = true;
+    for (const v of VISemes) this.mouth[v] = Math.max(this.mouth[v] * 0.3, weights[v] ?? 0);
+  }
+
+  /** boundary charIndex → segment switch (subtitles/expressions stay in sync with audio) */
+  boundaryAt(charIndex: number) {
+    if (!this.timeline) return;
+    let acc = 0;
+    for (let i = 0; i < this.timeline.segs.length; i++) {
+      const seg = this.timeline.segs[i];
+      acc += seg.text.length + 1;
+      if (charIndex < acc) {
+        if (this.segIdx !== i) {
+          this.segIdx = i;
+          this.expressions.setComposite(seg.expr);
+          this.onSegment?.(i);
+        }
+        return;
+      }
+    }
   }
 
   stopSpeaking() {
@@ -290,6 +320,14 @@ export class AvatarEngine {
     const out: Record<string, number> = {};
     for (const v of VISemes) out[v] = 0;
     if (this.state !== "speaking" || !this.timeline) return out;
+    if (this.boundaryMode) {
+      // live path — weights decay toward 0 between boundary events
+      for (const v of VISemes) {
+        this.mouth[v] *= 0.8;
+        out[v] = this.mouth[v];
+      }
+      return out;
+    }
     const t = performance.now() - this.tlStart;
     const items = this.timeline.items;
     while (this.tlIdx < items.length && items[this.tlIdx].t1 < t) this.tlIdx++;
