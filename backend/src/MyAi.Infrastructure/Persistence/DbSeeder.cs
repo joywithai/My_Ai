@@ -8,7 +8,11 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(AppDbContext db)
     {
-        await db.Database.MigrateAsync();
+        // apply migrations when the project has them; otherwise create schema directly
+        if (db.Database.GetPendingMigrations().Any())
+            await db.Database.MigrateAsync();
+        else
+            await db.Database.EnsureCreatedAsync();
 
         if (!db.SystemSettings.Any())
             db.SystemSettings.Add(new SystemSetting());

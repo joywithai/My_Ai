@@ -124,7 +124,10 @@ const H = (req, res) => {
     if (url === "/api/framing") return res.json(200, { framing: { targetY: 1.43, camY: 1.46, camZ: 1.4, fov: 33, locked: false } });
 
     // ── admin ──
-    if (url === "/api/admin/users") return res.json(200, { users: [{ id: user.id, email: user.email, name: user.name, role: user.role, status: user.status, createdAt: "2026-01-01T00:00:00Z", lastLoginAt: "2026-01-01T00:00:00Z", subscribedUntil: null, messagesToday: 3, dailyLimit: 500, hasCustomKey: true }] });
+    if (url === "/api/admin/users") return res.json(200, { users: [
+      { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status, createdAt: "2026-01-01T00:00:00Z", lastLoginAt: "2026-01-01T00:00:00Z", subscribedUntil: null, messagesToday: 3, dailyLimit: 500, hasCustomKey: true },
+      { id: "b2000000-0000-0000-0000-000000000002", email: "sub@demo.com", name: "Nabanita", role: "subscriber", status: "active", createdAt: "2026-01-02T00:00:00Z", lastLoginAt: "2026-01-02T00:00:00Z", subscribedUntil: "2026-02-01T00:00:00Z", messagesToday: 12, dailyLimit: 500, hasCustomKey: false },
+    ] });
     if (seg[1] === "admin" && seg[2] === "users" && seg[3] && req.method === "PATCH") return res.json(200, { ok: true });
     if (seg[1] === "admin" && seg[2] === "users" && seg[3] && req.method === "DELETE") { res.writeHead(204); return res.end(); }
     if (url === "/api/admin/flags") {

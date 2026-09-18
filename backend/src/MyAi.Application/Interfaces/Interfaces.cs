@@ -21,6 +21,7 @@ public interface IAppDbContext
     DbSet<SystemSetting> SystemSettings { get; }
     DbSet<AuditLog> AuditLogs { get; }
     Task<int> SaveChangesAsync(CancellationToken ct = default);
+    int SaveChanges();
 }
 
 public interface IPasswordHasher

@@ -6,8 +6,10 @@ export function uid(prefix = "id"): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
 }
 
-export function timeAgo(ts: number): string {
-  const diff = Date.now() - ts;
+export function timeAgo(ts: number | string): string {
+  const t = typeof ts === "number" ? ts : Date.parse(ts);
+  if (isNaN(t)) return "—";
+  const diff = Date.now() - t;
   const m = Math.floor(diff / 60000);
   if (m < 1) return "এইমাত্র";
   if (m < 60) return `${m} মিনিট আগে`;

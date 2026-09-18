@@ -39,15 +39,6 @@ export interface Conversation {
   messageCount: number;
 }
 
-export interface DemoUser {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  banned: boolean;
-  lastActive: string;
-}
-
 export interface FeatureFlags {
   canUseCustomApiKey: boolean;
   canAccessAllExpressions: boolean;

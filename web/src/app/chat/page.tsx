@@ -133,8 +133,8 @@ export default function ChatPage() {
         if (e?.status === 429) {
           useUi.getState().showToast(
             settings.uiLanguage === "bn"
-              ? `আজকের লিমিট শেষ (${e.data?.limit})! সাবস্ক্রাইব করলে বেশি কথা বলা যাবে 🚀`
-              : `Daily limit reached (${e.data?.limit})! Subscribe for more 🚀`,
+              ? "আজকের লিমিট শেষ! সাবস্ক্রাইব করলে বেশি কথা বলা যাবে 🚀"
+              : "Daily limit reached! Subscribe for more 🚀",
             "info"
           );
         } else if (e?.status === 403 && e?.data?.error === "banned") {

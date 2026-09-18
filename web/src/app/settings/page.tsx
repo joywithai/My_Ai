@@ -225,7 +225,7 @@ function VoiceTab() {
     <Section
       icon={<Volume2 size={15} />}
       title={t("voice2")}
-      desc={hasVoiceFor(settings.language) ? "Demo uses the browser TTS — Edge-TTS neural voices arrive with the backend" : "No browser voice for this language — test in English"}
+      desc={hasVoiceFor(settings.language) ? "Fallback voice — the server's neural Edge-TTS voice is used by default" : "No browser voice for this language — the server voice is used"}
     >
       <Row
         label="Input language"
@@ -281,7 +281,7 @@ function VoiceTab() {
           </div>
         }
       />
-      <Row label={t("demoVoice")} control={<Toggle checked={settings.demoVoiceOn} onChange={(v) => patch({ demoVoiceOn: v })} />} />
+      <Row label={t("browserVoice")} control={<Toggle checked={settings.demoVoiceOn} onChange={(v) => patch({ demoVoiceOn: v })} />} />
       <Row label={t("autoPlay")} control={<Toggle checked={settings.autoPlayAudio} onChange={(v) => patch({ autoPlayAudio: v })} />} />
       <div className="pt-3">
         <button

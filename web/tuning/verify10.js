@@ -23,17 +23,25 @@ const getHits = () => new Promise((resolve, reject) => {
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
 
-  // 1. login (demo chip Admin → admin@demo.com)
-  console.log("-> login");
+  // production login: type credentials (demo chips removed)
   await page.goto("http://localhost:3000/login", { waitUntil: "networkidle2", timeout: 60000 });
+  await sleep(1000);
+  await page.evaluate(() => localStorage.removeItem("myai.auth"));
+  await page.goto("http://localhost:3000/login", { waitUntil: "networkidle2" });
   await sleep(800);
-  await page.evaluate(() => {
-    const chips = [...document.querySelectorAll("button")];
-    chips.find((b) => b.textContent.trim() === "Admin")?.click();
-  });
-  await page.click("button.btn-primary");
-  await sleep(2000);
+  const typeLogin = async (email, pass) => {
+    await page.click('input[type="email"]');
+    await page.type('input[type="email"]', email);
+    await page.click('input[type="password"]');
+    await page.type('input[type="password"]', pass);
+    await page.keyboard.press("Enter");
+    await sleep(3000);
+  };
+  // 1. login as admin
+  console.log("-> login (admin@demo.com)");
+  await typeLogin("admin@demo.com", "admin123");
   console.log("url:", page.url());
+  console.log("topbar:", (await page.evaluate(() => document.body.innerText.replace(/\n/g, " | ").slice(0, 80))));
   await page.waitForFunction("window.__myaiAvatar === true", { timeout: 90000 });
   await sleep(3000);
 
@@ -51,6 +59,25 @@ const getHits = () => new Promise((resolve, reject) => {
     const btns = [...document.querySelectorAll("aside nav button")];
     btns.find((b) => b.textContent.includes("Avatar"))?.click();
   });
+  await sleep(1500);
+  // History tab → GET /api/conversations, DELETE + open one → GET /api/conversations/:id
+  await page.evaluate(() => {
+    const btns = [...document.querySelectorAll("aside nav button")];
+    btns.find((b) => /history/i.test(b.textContent))?.click();
+  });
+  await sleep(1500);
+  const delClicked = await page.evaluate(() => {
+    const row = document.querySelector(".cursor-pointer");
+    const trash = row?.querySelector("button");
+    if (trash) { trash.click(); return true; }
+    return false;
+  });
+  await sleep(1500);
+  console.log("history delete clicked:", delClicked);
+  await page.evaluate(() => document.querySelector(".cursor-pointer")?.click());
+  await sleep(3500); // navigates to /chat?c=… → deep-link loads messages
+  console.log("history open → url:", page.url());
+  await page.goto("http://localhost:3000/settings", { waitUntil: "networkidle2" });
   await sleep(1500);
   // Custom AI tab → PUT /api/settings (save key + remove key)
   await page.evaluate(() => {
@@ -74,17 +101,24 @@ const getHits = () => new Promise((resolve, reject) => {
     console.log("custom key saved:", save);
   }
 
-  // 4. admin — all 8 tabs → /api/admin/*
-  console.log("-> admin tabs");
+  // 4. admin — every tab + a WRITE action per tab (full control check)
+  console.log("-> admin tabs (+writes)");
   await page.goto("http://localhost:3000/admin", { waitUntil: "networkidle2" });
   await sleep(2000);
+  // Users tab (default): ban toggle → PATCH /api/admin/users/:id
+  await page.evaluate(() => document.querySelector('button[title="Ban"], button[title="Unban"]')?.click());
+  await sleep(1200);
+  console.log("  users: PATCH sent");
   for (const label of ["Flags", "Expressions", "Animations", "Avatars", "Plans", "System", "Audit"]) {
     await page.evaluate((l) => {
       const btns = [...document.querySelectorAll("main button")];
       btns.find((b) => b.textContent.trim().startsWith(l))?.click();
     }, label);
     await sleep(1100);
-    console.log("  tab", label, "ok");
+    // flip the first toggle in the tab → write endpoint for that resource
+    await page.evaluate(() => document.querySelector('[role="switch"]')?.click());
+    await sleep(900);
+    console.log("  tab", label, "ok (write sent)");
   }
 
   // 5. subscription as PUBLIC user → /api/plans + POST /api/payments/checkout
@@ -92,12 +126,7 @@ const getHits = () => new Promise((resolve, reject) => {
   await page.evaluate(() => localStorage.removeItem("myai.auth"));
   await page.goto("http://localhost:3000/login", { waitUntil: "networkidle2" });
   await sleep(1000);
-  await page.evaluate(() => {
-    const chips = [...document.querySelectorAll("button")];
-    chips.find((b) => b.textContent.trim() === "Public")?.click();
-  });
-  await page.evaluate(() => [...document.querySelectorAll("button")].find((b) => b.classList.contains("btn-primary"))?.click());
-  await sleep(2500);
+  await typeLogin("public@demo.com", "public123");
   await page.goto("http://localhost:3000/subscription", { waitUntil: "networkidle2" });
   await sleep(2500);
   const clicked = await page.evaluate(() => {
@@ -115,9 +144,16 @@ const getHits = () => new Promise((resolve, reject) => {
   const required = [
     "POST /api/auth/login", "GET /api/auth/me", "GET /api/framing", "POST /api/chat", "POST /api/tts",
     "GET /api/avatars", "PUT /api/settings",
-    "GET /api/admin/users", "GET /api/admin/flags", "GET /api/admin/expressions",
-    "GET /api/admin/animations", "GET /api/admin/avatars", "GET /api/admin/plans",
-    "GET /api/admin/settings", "GET /api/admin/audit",
+    "GET /api/conversations", "GET /api/conversations/c3000000-0000-0000-0000-000000000003",
+    "DELETE /api/conversations/c3000000-0000-0000-0000-000000000003",
+    "GET /api/admin/users", "PATCH /api/admin/users/b2000000-0000-0000-0000-000000000002",
+    "GET /api/admin/flags", "PUT /api/admin/flags",
+    "GET /api/admin/expressions", "PUT /api/admin/expressions",
+    "GET /api/admin/animations", "PUT /api/admin/animations",
+    "GET /api/admin/avatars", "PUT /api/admin/avatars",
+    "GET /api/admin/plans", "PATCH /api/admin/plans/e5000000-0000-0000-0000-000000000002",
+    "GET /api/admin/settings", "PUT /api/admin/settings",
+    "GET /api/admin/audit",
     "GET /api/plans", "POST /api/payments/checkout",
   ];
   const missing = required.filter((r) => !hits.includes(r));

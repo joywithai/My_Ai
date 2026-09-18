@@ -22,7 +22,7 @@ Initial migration (one time, optional):
 dotnet ef migrations add Init -p src/MyAi.Infrastructure -s src/MyAi.Api
 ```
 
-## Demo accounts (seeded)
+## First login (seeded bootstrap accounts — the UI has no account-creation UI hints)
 | email | password | role |
 |---|---|---|
 | admin@demo.com | admin123 | admin |

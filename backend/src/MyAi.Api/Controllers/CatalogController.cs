@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyAi.Application.DTOs;
 using MyAi.Application.Interfaces;
 
 namespace MyAi.Api.Controllers;

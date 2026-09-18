@@ -5,13 +5,6 @@ import { useAuth } from "@/lib/store/auth";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { useT } from "@/lib/i18n";
 import { useUi } from "@/lib/store/framing";
-import { cn } from "@/lib/utils";
-
-const DEMO = [
-  { email: "admin@demo.com", pass: "admin123", label: "Admin" },
-  { email: "sub@demo.com", pass: "sub12345", label: "Subscriber" },
-  { email: "public@demo.com", pass: "public123", label: "Public" },
-];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -68,26 +61,6 @@ export default function LoginPage() {
       <button onClick={submit} disabled={busy} className="btn-primary mt-4 w-full">
         {busy ? "…" : t("signIn")}
       </button>
-      <div className="mt-4">
-        <p className="mb-1.5 text-[10.5px] uppercase tracking-wide text-muted">{t("demoAccounts")}</p>
-        <div className="grid grid-cols-3 gap-1.5">
-          {DEMO.map((d) => (
-            <button
-              key={d.email}
-              type="button"
-              onClick={() => {
-                setEmail(d.email);
-                setPass(d.pass);
-              }}
-              className={cn(
-                "rounded-lg border border-line px-2 py-2 text-[11px] font-semibold text-muted transition hover:border-accent/40 hover:text-accent"
-              )}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-      </div>
     </AuthShell>
   );
 }

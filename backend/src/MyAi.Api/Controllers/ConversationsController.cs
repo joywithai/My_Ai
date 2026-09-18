@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyAi.Application.Interfaces;
@@ -46,9 +47,21 @@ public class ConversationsController : ControllerBase
         var messages = _db.Messages
             .Where(m => m.ConversationId == id)
             .OrderBy(m => m.CreatedAt)
-            .Select(m => new { role = m.Role, content = m.Content, segments = m.Segments, createdAt = m.CreatedAt })
+            .Select(m => new { m.Role, m.Content, m.Lang, m.Segments, m.CreatedAt })
             .ToList();
-        return Ok(new { conversation = new { id = conv.Id, title = conv.Title, updatedAt = conv.UpdatedAt }, messages });
+        return Ok(new
+        {
+            conversation = new { id = conv.Id, title = conv.Title, updatedAt = conv.UpdatedAt },
+            messages = messages.Select(m => new
+            {
+                role = m.Role,
+                content = m.Content,
+                lang = m.Lang,
+                // stored as JSON string in the DB → ship as a real array to the UI
+                segments = ParseSegments(m.Segments),
+                createdAt = m.CreatedAt,
+            }),
+        });
     }
 
     [HttpDelete("{id:guid}")]
@@ -62,5 +75,11 @@ public class ConversationsController : ControllerBase
         _db.Conversations.Remove(conv);
         _db.SaveChanges();
         return Ok(new { ok = true });
+    }
+
+    private static List<MyAi.Application.DTOs.ExpressionSegment> ParseSegments(string json)
+    {
+        try { return JsonSerializer.Deserialize<List<MyAi.Application.DTOs.ExpressionSegment>>(json) ?? new(); }
+        catch { return new(); }
     }
 }
