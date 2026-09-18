@@ -397,10 +397,15 @@ function AvatarTab() {
   const showToast = useUi((s) => s.showToast);
   const isAdmin = user.role === "admin";
   const [models, setModels] = useState<AvatarModelInfo[]>([]);
+  const [serverLocked, setServerLocked] = useState(false);
 
   useEffect(() => {
     api<{ models: AvatarModelInfo[] }>("/avatars")
       .then((r) => setModels(r.models))
+      .catch(() => {});
+    fetch("/api/framing")
+      .then((r) => r.json())
+      .then(({ framing: f }) => setServerLocked(!!f?.locked))
       .catch(() => {});
   }, [user.role]);
 
@@ -459,8 +464,8 @@ function AvatarTab() {
         title={t("avatarPosition")}
         desc="Admin sets the main-page view — everyone sees the avatar this way"
         action={
-          <Badge tone={locked ? "green" : isAdmin ? "yellow" : "default"}>
-            {locked ? (
+          <Badge tone={serverLocked ? "green" : isAdmin ? "yellow" : "default"}>
+            {serverLocked ? (
               <>
                 <Lock size={10} /> {t("locked")}
               </>
@@ -505,7 +510,18 @@ function AvatarTab() {
                 className="btn-primary flex flex-1 items-center justify-center gap-1.5 text-xs"
                 onClick={() => {
                   saveLock();
-                  showToast(t("saved") + " ✅");
+                  fetch("/api/admin/settings", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      framing: { ...framing, locked: true },
+                    }),
+                  })
+                    .then(() => {
+                      setServerLocked(true);
+                      showToast(t("saved") + " ✅");
+                    })
+                    .catch(() => showToast(t("saved") + " (local only)", "info"));
                 }}
               >
                 <Save size={14} /> {t("saveLock")}

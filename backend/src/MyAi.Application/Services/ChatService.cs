@@ -10,12 +10,20 @@ public class ChatService
     private readonly IAppDbContext _db;
     private readonly IAiProvider _ai;
     private readonly IEncryptionService _encryption;
+    private readonly ICache _cache;
 
-    public ChatService(IAppDbContext db, IAiProvider ai, IEncryptionService encryption)
+    public ChatService(IAppDbContext db, IAiProvider ai, IEncryptionService encryption, ICache cache)
     {
         _db = db;
         _ai = ai;
         _encryption = encryption;
+        _cache = cache;
+    }
+
+    private RoleFeatureFlag CacheAndReturn(RoleFeatureFlag flags, string role)
+    {
+        _cache.Set($"flags:{role}", flags, TimeSpan.FromSeconds(60));
+        return flags;
     }
 
     public async Task<ChatResponse> SendAsync(User user, ChatRequest request, CancellationToken ct = default)
@@ -25,7 +33,8 @@ public class ChatService
         text = text.Length > 500 ? text[..500] : text;
         var lang = request.Lang == "en" ? "en" : "bn";
 
-        var flags = _db.RoleFeatureFlags.First(f => f.Role == user.Role);
+        var flags = _cache.GetOrNothing<RoleFeatureFlag>($"flags:{user.Role}")
+            ?? CacheAndReturn(_db.RoleFeatureFlags.First(f => f.Role == user.Role), user.Role);
 
         // daily rate limit (server enforced)
         var todayUtc = DateTime.UtcNow.Date;

@@ -18,6 +18,16 @@ export async function PUT(req: NextRequest) {
   if (patch.defaultInputLanguage === "bn" || patch.defaultInputLanguage === "en") s.defaultInputLanguage = patch.defaultInputLanguage;
   if (typeof patch.registrationOpen === "boolean") s.registrationOpen = patch.registrationOpen;
   if (typeof patch.aiModel === "string" && patch.aiModel.trim()) s.aiModel = patch.aiModel.trim().slice(0, 80);
+  if (patch.framing && typeof patch.framing === "object") {
+    const f = patch.framing;
+    s.framing = {
+      targetY: Number(f.targetY) || 1.43,
+      camY: Number(f.camY) || 1.46,
+      camZ: Number(f.camZ) || 1.4,
+      fov: Number(f.fov) || 33,
+      locked: !!f.locked,
+    };
+  }
   save();
   audit(g.user.id, "update_system_settings", "system", JSON.stringify(patch));
   return NextResponse.json({ systemSettings: s });

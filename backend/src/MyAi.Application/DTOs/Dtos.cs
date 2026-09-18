@@ -5,8 +5,14 @@ namespace MyAi.Application.DTOs;
 public class AuthResponse
 {
     public string Token { get; set; } = "";
+    public string RefreshToken { get; set; } = "";
     public object User { get; set; } = new();
     public object? Settings { get; set; }
+}
+
+public class RefreshRequest
+{
+    public string RefreshToken { get; set; } = "";
 }
 
 public class LoginRequest

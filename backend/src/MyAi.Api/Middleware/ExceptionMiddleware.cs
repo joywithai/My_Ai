@@ -36,3 +36,9 @@ public class ExceptionMiddleware
         }
     }
 }
+
+public static class AppExtensions
+{
+    public static void LogStartupDone(this WebApplication app) =>
+        app.Logger.LogInformation("MyAi API started — Swagger at /swagger");
+}

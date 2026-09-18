@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyAi.Application.DTOs;
@@ -127,6 +128,12 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> PutSystem([FromBody] SystemPatch p)
     {
         await _admin.UpdateSystemAsync(p.DefaultUiLanguage, p.DefaultInputLanguage, p.RegistrationOpen, p.AiModel, AdminId);
+        if (p.Framing != null && p.Framing.Value.ValueKind == JsonValueKind.Object)
+        {
+            var sys = _db.SystemSettings.First();
+            sys.Framing = p.Framing.Value.GetRawText();
+            await _db.SaveChangesAsync();
+        }
         return Ok(new { systemSettings = _db.SystemSettings.First() });
     }
 
@@ -142,4 +149,4 @@ public record ExpressionPatch(Guid Id, bool? Active, string? MinRole, string? La
 public record AnimationPatch(Guid Id, bool? Active, string? MinRole);
 public record AvatarModelPatch(Guid Id, bool? Active, string? MinRole, bool? IsDefault, string? Name);
 public record PlanPatch(decimal? Price, bool? Active);
-public record SystemPatch(string? DefaultUiLanguage, string? DefaultInputLanguage, bool? RegistrationOpen, string? AiModel);
+public record SystemPatch(string? DefaultUiLanguage, string? DefaultInputLanguage, bool? RegistrationOpen, string? AiModel, JsonElement? Framing);

@@ -10,6 +10,7 @@
     <PackageReference Include="EFCore.NamingConventions" Version="10.0.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
+    <PackageReference Include="StackExchange.Redis" Version="2.8.24" />
     <ProjectReference Include="..\MyAi.Application\MyAi.Application.csproj" />
   </ItemGroup>
 </Project>

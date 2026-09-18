@@ -9,12 +9,14 @@ public class AuthService
     private readonly IAppDbContext _db;
     private readonly IPasswordHasher _hasher;
     private readonly IJwtService _jwt;
+    private readonly TokenService _tokens;
 
-    public AuthService(IAppDbContext db, IPasswordHasher hasher, IJwtService jwt)
+    public AuthService(IAppDbContext db, IPasswordHasher hasher, IJwtService jwt, TokenService tokens)
     {
         _db = db;
         _hasher = hasher;
         _jwt = jwt;
+        _tokens = tokens;
     }
 
     public async Task<AuthResponse> LoginAsync(string email, string password)
@@ -33,6 +35,21 @@ public class AuthService
         return new AuthResponse
         {
             Token = token,
+            RefreshToken = _tokens.IssueRefreshToken(user, null),
+            User = UserMapper.ToDto(user),
+            Settings = UserMapper.ToDto(user.Settings!),
+        };
+    }
+
+    /// <summary>Refresh rotation (README §3.4).</summary>
+    public async Task<AuthResponse> RefreshAsync(string rawRefreshToken)
+    {
+        var (token, refresh, user) = await _tokens.RotateAsync(rawRefreshToken);
+        await EnsureSettingsAsync(user);
+        return new AuthResponse
+        {
+            Token = token,
+            RefreshToken = refresh,
             User = UserMapper.ToDto(user),
             Settings = UserMapper.ToDto(user.Settings!),
         };
@@ -71,6 +88,7 @@ public class AuthService
         return new AuthResponse
         {
             Token = token,
+            RefreshToken = _tokens.IssueRefreshToken(user, null),
             User = UserMapper.ToDto(user),
             Settings = UserMapper.ToDto(user.Settings),
         };

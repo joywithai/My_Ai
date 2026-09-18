@@ -8,8 +8,13 @@ namespace MyAi.Application.Services;
 public class AdminService
 {
     private readonly IAppDbContext _db;
+    private readonly ICache _cache;
 
-    public AdminService(IAppDbContext db) => _db = db;
+    public AdminService(IAppDbContext db, ICache cache)
+    {
+        _db = db;
+        _cache = cache;
+    }
 
     public List<object> GetUsers()
     {
@@ -84,6 +89,7 @@ public class AdminService
         if (patch.MaxConversationHistory.HasValue) flags.MaxConversationHistory = patch.MaxConversationHistory.Value;
         if (patch.MaxMessagesPerDay.HasValue) flags.MaxMessagesPerDay = patch.MaxMessagesPerDay.Value;
         flags.UpdatedAt = DateTime.UtcNow;
+        _cache.Set($"flags:{role}", flags, TimeSpan.FromSeconds(60));
         await LogAsync(adminId, "update_flags", "flags", role);
         await _db.SaveChangesAsync();
     }

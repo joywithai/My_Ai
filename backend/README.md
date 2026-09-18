@@ -33,6 +33,24 @@ dotnet ef migrations add Init -p src/MyAi.Infrastructure -s src/MyAi.Api
 - System default: `AI:ApiKey` in appsettings/env (Gemini API key).
 - User keys (subscriber+): stored AES-GCM encrypted (`Encryption:Key`).
 
+## Security (README §3.4)
+- **JWT RS256** — key pair at `MyAi.Api/keys/jwt_rsa.pem`, generated on first run
+  (mount `keys/` in production; never commit it). Refresh tokens: opaque 64-byte
+  random, stored SHA-256-hashed in `refresh_tokens`, 30-day expiry, rotated on
+  `POST /api/auth/refresh`, all revoked on `POST /api/auth/logout`.
+- **Rate limiting (Redis sliding window, chat endpoint only)** — admin unlimited,
+  subscriber 500/day, public_user 50/day, default/anonymous 10/minute; headers
+  `X-RateLimit-Limit/Remaining/Reset`. Login/register: fixed window per IP
+  (15/min). Redis is fail-soft — when it is down requests pass through and the
+  DB daily count still enforces limits.
+- **Serilog** console + rolling file `logs/myai-.log` (30 days retained).
+- **Hangfire** dashboard `/hangfire` (admin role required) + daily
+  `SubscriptionCleanupJob` (expire lapsed subscriptions, purge 2-year-old audit rows).
+
+## Cache
+`ICache` (Redis via StackExchange.Redis, fail-soft) caches role feature flags for
+60s; admin flag updates refresh the cache entry immediately.
+
 ## Lip-sync contract
 `POST /api/tts {text, lang, voice, rate, pitch}` →
 `{audioBase64, contentType, boundaries:[{charIndex, length, text}]}`

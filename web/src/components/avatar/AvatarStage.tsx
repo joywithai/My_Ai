@@ -92,6 +92,24 @@ export default function AvatarStage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [framing, mode]);
 
+  // server-enforced admin framing (README: admin sets, everyone sees)
+  useEffect(() => {
+    if (mode !== "chat") return;
+    let cancelled = false;
+    fetch("/api/framing")
+      .then((r) => r.json())
+      .then(({ framing: f }) => {
+        if (!cancelled && f?.locked) {
+          const { targetY, camY, camZ, fov } = f;
+          getEngine().setFraming({ targetY, camY, camZ, fov });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, ready]);
+
   useEffect(() => {
     if (mode === "landing" && ready) {
       getEngine().setFraming(LANDING_FRAMING);

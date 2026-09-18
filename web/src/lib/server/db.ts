@@ -95,7 +95,13 @@ export interface Db {
   plans: DbPlan[];
   subscriptions: DbSubscription[];
   payments: DbPayment[];
-  systemSettings: { defaultUiLanguage: "bn" | "en"; defaultInputLanguage: "bn" | "en"; registrationOpen: boolean; aiModel: string };
+  systemSettings: {
+    defaultUiLanguage: "bn" | "en";
+    defaultInputLanguage: "bn" | "en";
+    registrationOpen: boolean;
+    aiModel: string;
+    framing: { targetY: number; camY: number; camZ: number; fov: number; locked: boolean };
+  };
   audit: DbAudit[];
 }
 
@@ -175,7 +181,13 @@ function seed(): Db {
     ],
     subscriptions: [],
     payments: [],
-    systemSettings: { defaultUiLanguage: "en", defaultInputLanguage: "bn", registrationOpen: true, aiModel: "gemini-2.5-flash" },
+    systemSettings: {
+      defaultUiLanguage: "en",
+      defaultInputLanguage: "bn",
+      registrationOpen: true,
+      aiModel: "gemini-2.5-flash",
+      framing: { targetY: 1.43, camY: 1.46, camZ: 1.4, fov: 33, locked: false },
+    },
     audit: [],
   };
 }

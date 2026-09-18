@@ -1,16 +1,32 @@
-using System.Text;
+using System.Security.Claims;
+using System.Text.Json;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using MyAi.Api.Jobs;
+using MyAi.Api.Filters;
 using MyAi.Api.Middleware;
 using MyAi.Application.Interfaces;
 using MyAi.Application.Services;
 using MyAi.Infrastructure;
+using MyAi.Infrastructure.Auth;
 using MyAi.Infrastructure.Persistence;
-using MyAi.Infrastructure.Tts;
+using Serilog;
+using StackExchange.Redis;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── logging (README §4.1: Serilog console + file) ──
+builder.Host.UseSerilog((ctx, cfg) => cfg
+    .ReadFrom.Configuration(ctx.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File("logs/myai-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 30));
 
 // ── database ──
 builder.Services.AddDbContext<AppDbContext>(o =>
@@ -22,13 +38,23 @@ builder.Services.AddInfrastructure();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<AdminService>();
 
-// ── auth ──
-var jwtSecret = builder.Configuration["Jwt:Secret"]!;
+// ── Redis (fail-soft cache) ──
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+    ConnectionMultiplexer.Connect(new ConfigurationOptions
+    {
+        EndPoints = { builder.Configuration["Redis:Endpoint"] ?? "localhost:6379" },
+        AbortOnConnectFail = false,
+    }));
+
+// ── auth: RS256 (README §3.4) — RSA key loaded once at startup ──
+var holder = new RsaSigningKeyHolder(builder.Environment);
+builder.Services.AddSingleton(holder);
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
@@ -40,12 +66,29 @@ builder.Services
             ValidateAudience = true,
             ValidAudience = builder.Configuration["Jwt:Audience"],
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            IssuerSigningKey = new RsaSecurityKey(holder.PublicParameters),
             ClockSkew = TimeSpan.Zero,
         };
     });
 builder.Services.AddAuthorization(o =>
     o.AddPolicy("AdminOnly", p => p.RequireRole("admin")));
+
+// ── rate limiting (README §3.4: per role/user; IP on auth endpoints) ──
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy("auth", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 15, Window = TimeSpan.FromMinutes(1) }));
+});
+
+// ── background jobs (README §4.1: Hangfire) ──
+builder.Services.AddHangfire(c => c
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(o => o.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Default"))));
+builder.Services.AddHangfireServer();
 
 // ── web ──
 builder.Services.AddControllers();
@@ -73,22 +116,33 @@ builder.Services.AddSwaggerGen(o =>
 
 var app = builder.Build();
 
-// ── seed on startup ──
+// ── seed + recurring jobs ──
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await DbSeeder.SeedAsync(db);
 }
+RecurringJob.AddOrUpdate<SubscriptionCleanupJob>("subscription-cleanup",
+    j => j.Run(), Cron.Daily);
 
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseMiddleware<CorrelationIdMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseSerilogRequestLogging();
 app.UseCors("frontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<RateLimitingMiddleware>();
 app.MapControllers();
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireAdminFilter() },
+});
 
-app.Run();
+app.LogStartupDone();
+await app.RunAsync();

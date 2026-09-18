@@ -24,6 +24,10 @@ public class SystemSetting
     public string DefaultInputLanguage { get; set; } = "bn";
     public bool RegistrationOpen { get; set; } = true;
     public string AiModel { get; set; } = "gemini-2.5-flash";
+
+    /// <summary>JSON: {targetY, camY, camZ, fov, locked} — admin-locked avatar framing.</summary>
+    public string Framing { get; set; } = "{\"targetY\":1.43,\"camY\":1.46,\"camZ\":1.4,\"fov\":33,\"locked\":false}";
+
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 

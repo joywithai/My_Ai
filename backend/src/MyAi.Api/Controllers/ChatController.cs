@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MyAi.Application.DTOs;
 using MyAi.Application.Interfaces;
 using MyAi.Application.Services;
