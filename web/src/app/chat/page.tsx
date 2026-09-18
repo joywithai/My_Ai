@@ -5,6 +5,7 @@ import TopBar from "@/components/layout/TopBar";
 import AvatarStage from "@/components/avatar/AvatarStage";
 import ChatInput from "@/components/chat/ChatInput";
 import Subtitles from "@/components/chat/Subtitles";
+import ThinkingBubbles from "@/components/chat/ThinkingBubbles";
 import { useAuth } from "@/lib/store/auth";
 import { useSettings } from "@/lib/store/settings";
 import { useChat } from "@/lib/store/chat";
@@ -30,7 +31,6 @@ export default function ChatPage() {
   const ensureConversation = useChat((s) => s.ensureConversation);
   const addMessage = useChat((s) => s.addMessage);
   const bumpDaily = useChat((s) => s.bumpDaily);
-  const dailyCount = useChat((s) => s.dailyCount);
 
   const [busy, setBusy] = useState(false);
   const [thinking, setThinking] = useState(false);
@@ -42,11 +42,6 @@ export default function ChatPage() {
   useEffect(() => {
     if (mounted && !user) router.replace("/");
   }, [mounted, user, router]);
-
-  const clearSubLater = useCallback((ms: number) => {
-    if (subTimer.current) clearTimeout(subTimer.current);
-    subTimer.current = setTimeout(() => setSub(null), ms);
-  }, []);
 
   // greeting subtitle after avatar loads
   const onAvatarLoaded = useCallback(() => {
@@ -76,7 +71,7 @@ export default function ChatPage() {
       addMessage({ conversationId: convId, role: "user", content: text, language: lang });
       bumpDaily();
 
-      // thinking phase 🤔
+      // thinking phase — eyes up + ??? bubbles, avatar stays locked
       setBusy(true);
       setThinking(true);
       setSub(null);
@@ -97,7 +92,7 @@ export default function ChatPage() {
         setSub(null);
       };
 
-      // speak phase 🗣️
+      // speak phase
       setThinking(false);
       engine.speakWithTimeline(timeline);
       if (settings.demoVoiceOn && settings.autoPlayAudio) {
@@ -137,15 +132,18 @@ export default function ChatPage() {
     <main className="flex h-dvh flex-col">
       <TopBar />
 
-      {/* avatar stage fills everything between bar & input */}
+      {/* avatar stage — everything overlays it, avatar never moves */}
       <div className="relative min-h-0 flex-1">
         <div className="absolute inset-0">
           <AvatarStage mode="chat" onLoaded={onAvatarLoaded} />
         </div>
 
-        {/* thinking indicator */}
+        {/* ??? bubbles while thinking */}
+        {thinking && <ThinkingBubbles />}
+
+        {/* thinking pill — overlay, no layout shift */}
         {thinking && (
-          <div className="pointer-events-none absolute bottom-24 left-1/2 -translate-x-1/2">
+          <div className="pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2">
             <div className="glass flex items-center gap-1.5 rounded-full px-4 py-2">
               <span className="thinking-dot h-1.5 w-1.5 rounded-full bg-accent" />
               <span className="thinking-dot h-1.5 w-1.5 rounded-full bg-accent" />
@@ -156,10 +154,19 @@ export default function ChatPage() {
             </div>
           </div>
         )}
+
+        {/* subtitles — overlay above the input, avatar locked */}
+        {settings.showSubtitles && (
+          <div className="absolute inset-x-0 bottom-5 z-10">
+            <Subtitles
+              text={sub?.text ?? ""}
+              expression={sub?.expression}
+              visible={!!sub}
+            />
+          </div>
+        )}
       </div>
 
-      {/* subtitles + input */}
-      {settings.showSubtitles && <Subtitles text={sub?.text ?? ""} expression={sub?.expression} visible={!!sub} className="mb-2" />}
       <ChatInput
         lang={settings.language}
         onLang={(l) => useSettings.getState().patch({ language: l })}

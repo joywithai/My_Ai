@@ -4,11 +4,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AvatarStage from "@/components/avatar/AvatarStage";
 import { useAuth } from "@/lib/store/auth";
+import { useSettings } from "@/lib/store/settings";
+import { cn } from "@/lib/utils";
 
 export default function LandingPage() {
   const user = useAuth((s) => s.user);
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const language = useSettings((s) => s.settings.language);
+  const patch = useSettings((s) => s.patch);
 
   useEffect(() => setMounted(true), []);
   useEffect(() => {
@@ -21,19 +25,46 @@ export default function LandingPage() {
 
   return (
     <main className="mx-auto flex h-dvh max-w-[1000px] flex-col px-4">
-      {/* top bar — only login/signup buttons */}
-      <div className="flex h-14 items-center justify-end gap-2">
-        <Link href="/register" className="btn-ghost !py-2 text-xs">
-          সাইনআপ
-        </Link>
-        <Link href="/login" className="btn-primary !py-2 text-xs">
-          লগইন
-        </Link>
+      {/* top bar — app name + BN/EN toggle */}
+      <div className="flex h-14 shrink-0 items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-indigo-400 text-[13px] font-black text-[#16101f]">
+            M
+          </div>
+          <span className="text-[15px] font-bold tracking-tight">
+            My<span className="text-accent">Ai</span>
+          </span>
+        </div>
+
+        <div className="flex overflow-hidden rounded-xl border border-line">
+          {(["bn", "en"] as const).map((l) => (
+            <button
+              key={l}
+              onClick={() => patch({ language: l })}
+              className={cn(
+                "px-3 py-2 text-xs font-bold transition-all",
+                language === l ? "bg-accent text-[#16101f]" : "text-muted hover:text-txt"
+              )}
+            >
+              {l.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* avatar box — শুধু avatar, আর কিছু না */}
-      <div className="relative my-2 min-h-0 flex-1 overflow-hidden rounded-2xl border border-line">
+      {/* avatar frame — buttons overlay the bottom */}
+      <div className="relative my-2 mb-3 min-h-0 flex-1 overflow-hidden rounded-2xl border border-line">
         <AvatarStage mode="landing" />
+
+        {/* login / signup — bottom center, on the frame */}
+        <div className="absolute inset-x-0 bottom-5 z-20 flex items-center justify-center gap-2.5">
+          <Link href="/register" className="btn-ghost !px-5 !py-2.5 text-xs backdrop-blur-md">
+            সাইনআপ
+          </Link>
+          <Link href="/login" className="btn-primary !px-6 !py-2.5 text-xs">
+            লগইন
+          </Link>
+        </div>
       </div>
     </main>
   );

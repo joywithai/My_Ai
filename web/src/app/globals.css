@@ -130,3 +130,54 @@ body::before {
 .thinking-dot:nth-child(3) {
   animation-delay: 0.4s;
 }
+
+/* frosted glass edges for the avatar frame (~20% blur) */
+.frame-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 64px;
+  pointer-events: none;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.frame-edge-top {
+  top: 0;
+  background: linear-gradient(to bottom, rgba(8, 8, 8, 0.65), rgba(8, 8, 8, 0));
+  border-radius: 1rem 1rem 0 0;
+}
+.frame-edge-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, rgba(8, 8, 8, 0.65), rgba(8, 8, 8, 0));
+  border-radius: 0 0 1rem 1rem;
+}
+
+/* "???" thought bubbles rising like foam */
+@keyframes floatUp {
+  0% {
+    transform: translateY(10px) translateX(0) scale(0.85);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-52px) translateX(10px) scale(1.05);
+    opacity: 0;
+  }
+}
+.bubble-float {
+  animation: floatUp 2.3s ease-in-out infinite;
+  text-shadow: 0 0 18px rgba(167, 139, 250, 0.55);
+}
+.bubble-float-2 {
+  animation-delay: 0.75s;
+  animation-duration: 2.6s;
+}
+.bubble-float-3 {
+  animation-delay: 1.5s;
+  animation-duration: 2.9s;
+}

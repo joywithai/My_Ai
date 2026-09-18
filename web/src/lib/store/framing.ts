@@ -13,9 +13,9 @@ interface FramingState {
 }
 
 export const DEFAULT_FRAMING: AvatarFraming = {
-  targetY: 1.3,
-  camY: 1.34,
-  camZ: 1.85,
+  targetY: 1.43,
+  camY: 1.46,
+  camZ: 1.4,
   fov: 33,
 };
 
@@ -28,7 +28,11 @@ export const useFraming = create<FramingState>()(
       saveLock: () => set({ locked: true }),
       reset: () => set({ framing: { ...DEFAULT_FRAMING }, locked: false }),
     }),
-    { name: "myai.framing" }
+    {
+      name: "myai.framing",
+      version: 1,
+      migrate: () => ({ framing: { ...DEFAULT_FRAMING }, locked: false }),
+    }
   )
 );
 

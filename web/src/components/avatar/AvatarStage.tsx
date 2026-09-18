@@ -7,6 +7,14 @@ import { Loader2 } from "lucide-react";
 
 type Mode = "landing" | "chat" | "preview";
 
+/** landing framing — head never cropped, room above the hair */
+export const LANDING_FRAMING = {
+  targetY: 1.32,
+  camY: 1.36,
+  camZ: 2.15,
+  fov: 33,
+};
+
 export default function AvatarStage({
   mode,
   onLoaded,
@@ -36,7 +44,7 @@ export default function AvatarStage({
       .then(() => {
         setReady(true);
         if (mode === "landing") {
-          engine.setState("shh");
+          engine.setState("idle");
         } else if (mode === "chat") {
           engine.setState("greeting");
           greetTimer = setTimeout(() => {
@@ -80,7 +88,7 @@ export default function AvatarStage({
 
   useEffect(() => {
     if (mode === "landing" && ready) {
-      getEngine().setFraming({ targetY: 1.3, camY: 1.33, camZ: 1.95, fov: 33 });
+      getEngine().setFraming(LANDING_FRAMING);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, ready]);
@@ -88,6 +96,14 @@ export default function AvatarStage({
   return (
     <div className={`relative h-full w-full overflow-hidden ${className ?? ""}`}>
       <canvas ref={canvasRef} className="h-full w-full" />
+
+      {/* frosted glass edges (~20% blur) */}
+      {mode === "landing" && ready && (
+        <>
+          <div className="frame-edge frame-edge-top" />
+          <div className="frame-edge frame-edge-bottom" />
+        </>
+      )}
 
       {!ready && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">

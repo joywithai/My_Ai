@@ -9,7 +9,6 @@ import { POSES, BASE_EXPRESSION } from "./poses";
 
 export type AvatarState =
   | "loading"
-  | "shh"
   | "greeting"
   | "idle"
   | "thinking"
@@ -199,9 +198,15 @@ export class AvatarEngine {
 
   setState(s: AvatarState) {
     this.state = s;
-    this.expressions.setComposite(BASE_EXPRESSION[s] ?? "neutral");
+    this.expressions.setComposite(
+      s === "idle" ? this.defaultExpression : BASE_EXPRESSION[s] ?? "neutral"
+    );
     this.lookMode =
-      s === "thinking" ? "think" : s === "speaking" ? "speak" : "camera";
+      s === "thinking" && this.thinkingPoseEnabled
+        ? "think"
+        : s === "speaking"
+        ? "speak"
+        : "camera";
     if (s !== "speaking") {
       this.timeline = null;
       this.segIdx = -1;
@@ -319,7 +324,7 @@ export class AvatarEngine {
     targets.spine = [(targets.spine?.[0] ?? 0) + 0.008 * br, 0, 0];
 
     // idle sway / speaking motion
-    if (this.state === "idle" || this.state === "speaking" || this.state === "shh") {
+    if (this.state === "idle" || this.state === "speaking") {
       if (this.enabledAnimations.includes("head-sway")) {
         targets.head = add(targets.head, [0, 0.045 * Math.sin(t * 0.4), 0.02 * Math.sin(t * 0.23 + 1)]);
         targets.neck = add(targets.neck, [0, 0.02 * Math.sin(t * 0.33 + 2), 0]);
