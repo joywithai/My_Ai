@@ -150,7 +150,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   thinkingPoseEnabled: true,
   showSubtitles: true,
   autoPlayAudio: true,
-  demoVoiceOn: true,
+  demoVoiceOn: false,   // default: .NET Edge-TTS neural voice (browser voice = opt-in demo toggle)
   customAi: null,
 };
 

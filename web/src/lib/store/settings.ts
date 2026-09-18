@@ -10,7 +10,7 @@ import {
   Role,
   UserSettings,
 } from "../types";
-import { getToken } from "../api";
+import { api } from "../api";
 
 interface SettingsState {
   settings: UserSettings;
@@ -40,15 +40,8 @@ export const useSettings = create<SettingsState>()(
       hydrateFromServer: (srv) => set((s) => ({ settings: { ...s.settings, ...srv } })),
       patch: (p) => {
         set((s) => ({ settings: { ...s.settings, ...p } }));
-        // best-effort server mirror
-        const token = getToken();
-        if (token) {
-          fetch("/api/settings", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify(p),
-          }).catch(() => {});
-        }
+        // best-effort server mirror (.NET backend)
+        api("/settings", { method: "PUT", json: p }).catch(() => {});
       },
       setExpression: (e) => set((s) => ({ settings: { ...s.settings, defaultExpression: e } })),
       toggleAnimation: (name) =>

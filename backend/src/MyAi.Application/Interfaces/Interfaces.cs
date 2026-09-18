@@ -77,6 +77,7 @@ public class WordBoundary
     public int CharIndex { get; set; }
     public int Length { get; set; }
     public string Text { get; set; } = "";
+    public long Offset { get; set; }   // 100-ns ticks from speech start → exact audio sync
 }
 
 /// <summary>Reads the current JWT user from the request.</summary>

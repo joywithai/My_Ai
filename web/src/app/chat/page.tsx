@@ -13,7 +13,7 @@ import { useUi } from "@/lib/store/framing";
 import { api } from "@/lib/api";
 import { getEngine } from "@/lib/engine/AvatarEngine";
 import { buildSpeakTimeline } from "@/lib/engine/lipsync";
-import { demoSpeak, demoSpeakStop } from "@/lib/speak";
+import { demoSpeak, demoSpeakStop, backendSpeak, backendSpeakStop } from "@/lib/speak";
 import { useT } from "@/lib/i18n";
 import type { ExpressionSegment } from "@/lib/types";
 
@@ -92,16 +92,28 @@ export default function ChatPage() {
         // speak phase — mouth driven by real audio boundary events
         setThinking(false);
         engine.speakWithTimeline(timeline);
-        if (settings.demoVoiceOn && settings.autoPlayAudio) {
-          const ok = demoSpeak(fullText, lang, settings.voiceSpeed, settings.voicePitch, {
-            onBoundary: (charIndex) => {
+        if (settings.autoPlayAudio) {
+          const hooks = {
+            onBoundary: (charIndex: number) => {
               const hit = offsets.find((o) => charIndex >= o.start && charIndex < o.end);
               if (hit) setSub({ text: hit.seg.text, expression: hit.seg.expression });
             },
             onEnd: () => {
               /* engine finishes via timeline */
             },
-          });
+          };
+          // neural voice from the .NET backend (Edge-TTS, exact word-boundary sync)
+          let ok = false;
+          if (!settings.demoVoiceOn) {
+            ok = await backendSpeak(fullText, lang, {
+              voice: settings.voiceName,
+              rate: settings.voiceSpeed,
+              pitch: settings.voicePitch,
+              hooks,
+            });
+          }
+          // demo-voice toggle (or backend TTS unavailable) → browser voice
+          if (!ok) ok = demoSpeak(fullText, lang, settings.voiceSpeed, settings.voicePitch, hooks);
           if (!ok) {
             // no TTS available → fallback: run timeline mouth only
             engine.boundaryMode = false;
@@ -141,6 +153,7 @@ export default function ChatPage() {
     const engine = getEngine();
     engine.stopSpeaking();
     demoSpeakStop();
+    backendSpeakStop();
     setBusy(false);
     setThinking(false);
     setSub(null);

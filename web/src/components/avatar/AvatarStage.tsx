@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { getEngine } from "@/lib/engine/AvatarEngine";
+import { api } from "@/lib/api";
 import { useSettings } from "@/lib/store/settings";
 import { useFraming } from "@/lib/store/framing";
 
@@ -39,28 +40,43 @@ export default function AvatarStage({
     let greetTimer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false; // StrictMode double-mount guard
 
-    // selected avatar model (female default focus; male optional) with fallback
-    const wantsMale = mode !== "landing" && useSettings.getState().settings.avatarModelId === "avatar-male";
-    const file = wantsMale ? "/models/avatar-male.vrm" : "/models/avatar.vrm";
-    engine
-      .load(file, setProgress)
-      .catch(() => engine.load("/models/avatar.vrm", setProgress))
-      .then(() => {
-        if (cancelled) return;
-        setReady(true);
-        if (mode === "landing") {
-          engine.setState("idle");
-        } else if (mode === "chat") {
-          engine.setState("greeting");
-          greetTimer = setTimeout(() => {
-            if (getEngine().state === "greeting") getEngine().setState("idle");
-          }, 2700);
-        } else {
-          engine.setState("idle");
+    // selected avatar model — resolved from the backend catalog (/api/avatars,
+    // GUID ids) with local fallback to the bundled VRMs
+    (async () => {
+      const s0 = useSettings.getState().settings;
+      let file = mode !== "landing" && s0.avatarModelId === "avatar-male" ? "/models/avatar-male.vrm" : "/models/avatar.vrm";
+      if (mode !== "landing") {
+        try {
+          const { models } = await api<{ models: { id: string; gender: string; file: string; isDefault: boolean }[] }>("/avatars");
+          const sel =
+            models.find((m) => m.id === useSettings.getState().settings.avatarModelId) ??
+            models.find((m) => m.isDefault) ??
+            models.find((m) => m.gender === "female");
+          if (sel?.file && sel.file.startsWith("/models/")) file = sel.file;
+        } catch {
+          /* offline / not logged in → bundled default */
         }
-        onLoaded?.();
-      })
-      .catch((e) => console.error("VRM load failed", e));
+      }
+      await engine
+        .load(file, setProgress)
+        .catch(() => engine.load("/models/avatar.vrm", setProgress))
+        .then(() => {
+          if (cancelled) return;
+          setReady(true);
+          if (mode === "landing") {
+            engine.setState("idle");
+          } else if (mode === "chat") {
+            engine.setState("greeting");
+            greetTimer = setTimeout(() => {
+              if (getEngine().state === "greeting") getEngine().setState("idle");
+            }, 2700);
+          } else {
+            engine.setState("idle");
+          }
+          onLoaded?.();
+        })
+        .catch((e) => console.error("VRM load failed", e));
+    })();
 
     return () => {
       cancelled = true;
@@ -96,8 +112,7 @@ export default function AvatarStage({
   useEffect(() => {
     if (mode !== "chat") return;
     let cancelled = false;
-    fetch("/api/framing")
-      .then((r) => r.json())
+    api<{ framing: { locked?: boolean; targetY: number; camY: number; camZ: number; fov: number } }>("/framing")
       .then(({ framing: f }) => {
         if (!cancelled && f?.locked) {
           const { targetY, camY, camZ, fov } = f;

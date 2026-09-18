@@ -35,36 +35,45 @@ public class SettingsService
         if (patch.AvatarModelId.HasValue) s.DefaultAvatarId = patch.AvatarModelId;
         s.UpdatedAt = DateTime.UtcNow;
 
-        if (patch.CustomAi == null)
+        if (patch.CustomAi.HasValue)
         {
-            var old = _db.CustomAiKeys.Where(k => k.UserId == user.Id).ToList();
-            foreach (var k in old) _db.CustomAiKeys.Remove(k);
-        }
-        else if (!string.IsNullOrEmpty(patch.CustomAi.ApiKey))
-        {
-            var flags = _db.RoleFeatureFlags.First(f => f.Role == user.Role);
-            if (!flags.CanUseCustomApiKey)
-                throw new AppException(403, "forbidden");
-
-            var input = patch.CustomAi;
-            var raw = input.ApiKey!;
-            var old2 = _db.CustomAiKeys.Where(k => k.UserId == user.Id).ToList();
-            foreach (var k in old2) _db.CustomAiKeys.Remove(k);
-            _db.CustomAiKeys.Add(new CustomAiKey
+            var el = patch.CustomAi.Value;
+            if (el.ValueKind == JsonValueKind.Null)
             {
-                UserId = user.Id,
-                Provider = input.Provider == "openrouter" ? "openrouter" : "gemini",
-                KeyEncrypted = _encryption.Encrypt(raw),
-                MaskedKey = raw.Length > 10 ? raw[..5] + "…" + raw[^4..] : "••••••",
-                AiModel = input.Model,
-                BaseUrl = string.IsNullOrEmpty(input.BaseUrl)
-                    ? (input.Provider == "openrouter" ? "https://openrouter.ai/api/v1/" : "https://generativelanguage.googleapis.com/v1beta/")
-                    : input.BaseUrl,
-                Temperature = (decimal)input.Temperature,
-                MaxOutputTokens = input.MaxOutputTokens,
-                IsValid = true,
-                TestedAt = DateTime.UtcNow,
-            });
+                // explicit null → remove the stored key
+                var old = _db.CustomAiKeys.Where(k => k.UserId == user.Id).ToList();
+                foreach (var k in old) _db.CustomAiKeys.Remove(k);
+            }
+            else if (el.ValueKind == JsonValueKind.Object)
+            {
+                var input = JsonSerializer.Deserialize<CustomAiInput>(el.GetRawText())!;
+                if (!string.IsNullOrEmpty(input.ApiKey))
+                {
+                    var flags = _db.RoleFeatureFlags.First(f => f.Role == user.Role);
+                    if (!flags.CanUseCustomApiKey)
+                        throw new AppException(403, "forbidden");
+
+                    var raw = input.ApiKey!;
+                    var old2 = _db.CustomAiKeys.Where(k => k.UserId == user.Id).ToList();
+                    foreach (var k in old2) _db.CustomAiKeys.Remove(k);
+                    _db.CustomAiKeys.Add(new CustomAiKey
+                    {
+                        UserId = user.Id,
+                        Provider = input.Provider == "openrouter" ? "openrouter" : "gemini",
+                        KeyEncrypted = _encryption.Encrypt(raw),
+                        MaskedKey = raw.Length > 10 ? raw[..5] + "…" + raw[^4..] : "••••••",
+                        AiModel = input.Model,
+                        BaseUrl = string.IsNullOrEmpty(input.BaseUrl)
+                            ? (input.Provider == "openrouter" ? "https://openrouter.ai/api/v1/" : "https://generativelanguage.googleapis.com/v1beta/")
+                            : input.BaseUrl,
+                        Temperature = (decimal)input.Temperature,
+                        MaxOutputTokens = input.MaxOutputTokens,
+                        IsValid = true,
+                        TestedAt = DateTime.UtcNow,
+                    });
+                }
+                // object without apiKey → keep whatever is stored
+            }
         }
 
         await _db.SaveChangesAsync();

@@ -33,15 +33,5 @@ public class CatalogController : ControllerBase
             plans = _db.SubscriptionPlans
                 .Where(p => p.IsActive)
                 .OrderBy(p => p.Price)
-                .Select(p => new
-                {
-                    id = p.Id,
-                    name = p.Name,
-                    price = p.Price,
-                    currency = p.Currency,
-                    cycle = p.BillingPeriod,
-                    features = p.Features,
-                    popular = p.BillingPeriod == "monthly" && p.Price > 0,
-                }),
+                .Select(PlanMapper.ToDto),
         });
-}

@@ -57,7 +57,14 @@ dotnet ef migrations add Init -p src/MyAi.Infrastructure -s src/MyAi.Api
 Feed `boundaries` to the frontend `engine.setViseme/boundaryAt` — the same
 functions the demo uses today, so the avatar lip-syncs 100% with real audio.
 
-## Frontend swap
-The Next.js frontend talks to the identical JSON shapes this API exposes.
-Set `NEXT_PUBLIC_API_BASE=http://localhost:5000` in `web/.env.local` and the
-demo Next.js routes are bypassed.
+## Frontend (connected — no demo layer)
+The Next.js app in `web/` is UI-only: every request goes to this API.
+- Default backend origin: `http://localhost:5000` (matches `launchSettings.json`).
+  Override with `NEXT_PUBLIC_API_BASE` in `web/.env.local`.
+- Run: `docker compose up` (or VS F5) → `cd web && npm install && npm run dev`
+  → http://localhost:3000 (seeded demo accounts work).
+- Voice: chat audio comes from `POST /api/tts` (Edge-TTS + word-boundary
+  offsets → 100% synced lip-sync). "Demo voice" toggle switches to the
+  browser voice instead.
+- Contract E2E without dotnet: `node web/tuning/dotnetStub.js` (mirrors these
+  routes) + `web/tuning/verify10.js` — verifies every frontend call shape.

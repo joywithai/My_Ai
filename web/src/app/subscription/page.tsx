@@ -43,8 +43,7 @@ function Inner() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    fetch("/api/plans")
-      .then((r) => r.json())
+    api<{ plans: PlanView[] }>("/plans")
       .then((j) => setPlans(j.plans ?? []))
       .catch(() => setPlans([]));
   }, []);

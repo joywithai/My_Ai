@@ -76,6 +76,7 @@ public class EdgeTtsService : ITtsService
                     boundaries.Add(new WordBoundary
                     {
                         // offset is in 100-ns ticks from speech start
+                        Offset = long.Parse(match.Groups[1].Value),
                         CharIndex = FindCharIndex(text, boundaries.Count, match.Groups[3].Value),
                         Length = int.Parse(match.Groups[4].Value),
                         Text = match.Groups[3].Value,

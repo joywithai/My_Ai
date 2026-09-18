@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MyAi.Domain.Entities;
 
 namespace MyAi.Application.DTOs;
@@ -82,7 +83,8 @@ public class SettingsPatch
     public bool? AutoPlayAudio { get; set; }
     public bool? DemoVoiceOn { get; set; }
     public Guid? AvatarModelId { get; set; }
-    public CustomAiInput? CustomAi { get; set; }
+    /// null = remove key, absent = untouched, object = save (matches frontend demo semantics)
+    public JsonElement? CustomAi { get; set; }
 }
 
 public class CustomAiInput
@@ -105,6 +107,28 @@ public class FlagsPatch
     public bool? CanAccessChatHistory { get; set; }
     public int? MaxConversationHistory { get; set; }
     public int? MaxMessagesPerDay { get; set; }
+}
+
+public static class PlanMapper
+{
+    /// <summary>UI contract: {id,name,price,currency,cycle,features[],popular,active}.</summary>
+    public static object ToDto(SubscriptionPlan p) => new
+    {
+        id = p.Id,
+        name = p.Name,
+        price = p.Price,
+        currency = p.Currency,
+        cycle = p.BillingPeriod,
+        features = ParseFeatures(p.Features),
+        popular = p.BillingPeriod == "monthly" && p.Price > 0,
+        active = p.IsActive,
+    };
+
+    private static List<string> ParseFeatures(string json)
+    {
+        try { return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>(); }
+        catch { return new List<string>(); }
+    }
 }
 
 public static class UserMapper

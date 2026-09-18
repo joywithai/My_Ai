@@ -15,7 +15,7 @@ import { api } from "@/lib/api";
 import { Badge, Toggle, Slider, Select, LockedTag } from "@/components/ui/primitives";
 import AvatarStage from "@/components/avatar/AvatarStage";
 import { ROLE_LABEL, AvatarFraming } from "@/lib/types";
-import { BANGLA_VOICES, ENGLISH_VOICES } from "@/lib/mock/data";
+import { BANGLA_VOICES, ENGLISH_VOICES } from "@/lib/voices";
 import { demoSpeak, hasVoiceFor } from "@/lib/speak";
 import { useT } from "@/lib/i18n";
 import { cn, timeAgo } from "@/lib/utils";
@@ -403,8 +403,7 @@ function AvatarTab() {
     api<{ models: AvatarModelInfo[] }>("/avatars")
       .then((r) => setModels(r.models))
       .catch(() => {});
-    fetch("/api/framing")
-      .then((r) => r.json())
+    api<{ framing: { locked?: boolean } }>("/framing")
       .then(({ framing: f }) => setServerLocked(!!f?.locked))
       .catch(() => {});
   }, [user.role]);
@@ -510,12 +509,9 @@ function AvatarTab() {
                 className="btn-primary flex flex-1 items-center justify-center gap-1.5 text-xs"
                 onClick={() => {
                   saveLock();
-                  fetch("/api/admin/settings", {
+                  api("/admin/settings", {
                     method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      framing: { ...framing, locked: true },
-                    }),
+                    json: { framing: { ...framing, locked: true } },
                   })
                     .then(() => {
                       setServerLocked(true);
