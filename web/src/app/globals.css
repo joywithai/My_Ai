@@ -160,3 +160,27 @@ body::before {
   animation-delay: 1.5s;
   animation-duration: 2.9s;
 }
+
+/* premium avatar loading */
+@keyframes ringSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+.loading-ring {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(167, 139, 250, 0.12) 110deg,
+    rgba(167, 139, 250, 0.85) 330deg,
+    #c4b5fd 360deg
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3.5px));
+  animation: ringSpin 1.1s linear infinite;
+}
+.loading-glow {
+  animation: glowPulse 2.2s ease-in-out infinite;
+}

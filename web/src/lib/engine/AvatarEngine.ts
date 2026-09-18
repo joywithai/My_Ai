@@ -328,6 +328,16 @@ export class AvatarEngine {
     // collect target rotations (pose + procedural overlays)
     const targets: Record<string, [number, number, number]> = {};
     for (const [bone, e] of Object.entries(pose)) targets[bone] = [e[0], e[1], e[2]];
+    // upper-body bones always damp back to neutral (e.g. after greeting sway)
+    for (const b of [
+      "head", "neck", "chest", "spine",
+      "leftShoulder", "rightShoulder",
+      "leftUpperArm", "rightUpperArm",
+      "leftLowerArm", "rightLowerArm",
+      "leftHand", "rightHand",
+    ]) {
+      if (!targets[b]) targets[b] = [0, 0, 0];
+    }
 
     // breathing — always on (subtle)
     const br = Math.sin(t * 1.5);

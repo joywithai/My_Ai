@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { getEngine } from "@/lib/engine/AvatarEngine";
 import { useSettings } from "@/lib/store/settings";
 import { useFraming } from "@/lib/store/framing";
-import { Loader2 } from "lucide-react";
 
 type Mode = "landing" | "chat" | "preview";
 
@@ -101,11 +100,30 @@ export default function AvatarStage({
       <canvas ref={canvasRef} className="h-full w-full" />
 
       {!ready && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-          <div className="skeleton h-40 w-40 rounded-full" />
-          <div className="flex items-center gap-2 text-xs text-muted">
-            <Loader2 size={13} className="animate-spin text-accent" />
-            {progress < 100 ? `Avatar লোড হচ্ছে… ${progress}%` : "প্রস্তুত হচ্ছে…"}
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-7">
+          {/* glowing orb + spinning gradient ring */}
+          <div className="relative h-36 w-36">
+            <div className="loading-glow absolute -inset-7 rounded-full bg-accent/10 blur-2xl" />
+            <div className="loading-ring absolute inset-0 rounded-full" />
+            <div className="absolute inset-[7px] flex items-center justify-center rounded-full bg-[#0c0b12]">
+              <span className="bg-gradient-to-br from-accent to-indigo-300 bg-clip-text text-4xl font-black text-transparent">
+                M
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-sm font-semibold tracking-wide text-txt/90">
+              My<span className="text-accent">Ai</span>{" "}
+              {settings.language === "bn" ? "জাগছে…" : "is waking up…"}
+            </span>
+            <div className="h-1 w-44 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-accent to-indigo-400 transition-all duration-300"
+                style={{ width: `${Math.max(progress, 4)}%` }}
+              />
+            </div>
+            <span className="font-mono text-[11px] text-muted">{progress}%</span>
           </div>
         </div>
       )}
