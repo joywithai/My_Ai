@@ -15,8 +15,8 @@ services:
     depends_on: [postgres, redis]
     environment:
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=myai;Username=postgres;Password=postgres"
-      Jwt__Secret: "dev-secret-change-in-production-at-least-64-characters-long-hmac-sha256"
       Encryption__Key: "dev-encryption-key-change-in-production"
+      Redis__Endpoint: "redis:6379"
     ports: ["5000:8080"]
 volumes:
   pgdata:

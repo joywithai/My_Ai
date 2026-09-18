@@ -32,8 +32,11 @@ builder.Host.UseSerilog((ctx, cfg) => cfg
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("Default"))
      .UseSnakeCaseNamingConvention());
+// Application + controllers depend on the IAppDbContext abstraction
+builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
 // ── application + infrastructure services ──
+builder.Services.AddHttpClient();          // IHttpClientFactory → AiProvider (OpenRouter/Gemini)
 builder.Services.AddInfrastructure();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
@@ -122,8 +125,11 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await DbSeeder.SeedAsync(db);
 }
-RecurringJob.AddOrUpdate<SubscriptionCleanupJob>("subscription-cleanup",
-    j => j.Run(), Cron.Daily);
+// register the recurring job through DI (static RecurringJob.* needs JobStorage.Current,
+// which is not initialized until the host starts — IRecurringJobManager is the safe path)
+app.Services.GetRequiredService<Hangfire.IRecurringJobManager>()
+    .AddOrUpdate<SubscriptionCleanupJob>("subscription-cleanup",
+        j => j.Run(), Cron.Daily);
 
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
