@@ -10,18 +10,18 @@ export type Euler3 = [number, number, number];
 export type PoseMap = Record<string, Euler3>;
 
 const ARMS_DOWN: PoseMap = {
-  leftUpperArm: [0, 0, -1.12],
-  rightUpperArm: [0, 0, 1.12],
-  leftLowerArm: [-0.12, 0, 0],
-  rightLowerArm: [-0.12, 0, 0],
+  leftUpperArm: [0, 0, -1.38],
+  rightUpperArm: [0, 0, 1.38],
+  leftLowerArm: [-0.1, 0, 0],
+  rightLowerArm: [-0.1, 0, 0],
 };
 
-/** Landing page — finger on lips, quiet waiting 🤫 (optimizer-converged) */
+/** Landing page — finger on lips, quiet waiting 🤫 (optimizer-converged, arm in front of chest) */
 const SHH: PoseMap = {
   ...ARMS_DOWN,
-  rightUpperArm: [0, 2.2, 1.46],
-  rightLowerArm: [0.15, 0, -2.56],
-  rightHand: [0.1, 0, 0.1],
+  rightUpperArm: [-0.25, 1.77, 1.5],
+  rightLowerArm: [0.15, -0.05, -2.31],
+  rightHand: [-0.5, 0, 0.1],
   head: [0.06, 0, -0.05],
   neck: [0.04, 0, -0.03],
   // curl fingers except index (kept straight, touching lips)
