@@ -131,27 +131,6 @@ body::before {
   animation-delay: 0.4s;
 }
 
-/* frosted glass edges for the avatar frame (~20% blur) */
-.frame-edge {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 64px;
-  pointer-events: none;
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-}
-.frame-edge-top {
-  top: 0;
-  background: linear-gradient(to bottom, rgba(8, 8, 8, 0.65), rgba(8, 8, 8, 0));
-  border-radius: 1rem 1rem 0 0;
-}
-.frame-edge-bottom {
-  bottom: 0;
-  background: linear-gradient(to top, rgba(8, 8, 8, 0.65), rgba(8, 8, 8, 0));
-  border-radius: 0 0 1rem 1rem;
-}
-
 /* "???" thought bubbles rising like foam */
 @keyframes floatUp {
   0% {

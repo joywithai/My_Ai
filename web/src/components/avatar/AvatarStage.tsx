@@ -11,7 +11,7 @@ type Mode = "landing" | "chat" | "preview";
 export const LANDING_FRAMING = {
   targetY: 1.32,
   camY: 1.36,
-  camZ: 2.15,
+  camZ: 2.28,
   fov: 33,
 };
 
@@ -96,14 +96,6 @@ export default function AvatarStage({
   return (
     <div className={`relative h-full w-full overflow-hidden ${className ?? ""}`}>
       <canvas ref={canvasRef} className="h-full w-full" />
-
-      {/* frosted glass edges (~20% blur) */}
-      {mode === "landing" && ready && (
-        <>
-          <div className="frame-edge frame-edge-top" />
-          <div className="frame-edge frame-edge-bottom" />
-        </>
-      )}
 
       {!ready && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">

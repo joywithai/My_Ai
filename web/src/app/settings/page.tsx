@@ -521,7 +521,7 @@ function AiTab() {
     <Section
       icon={<Cpu size={15} />}
       title="AI প্রোভাইডার"
-      desc="নিজের OpenRouter key দিলে সেটা দিয়েই উত্তর আসবে"
+      desc="নিজের OpenRouter key দিলে সেটা দিয়েই উত্তর আসবে (openrouter.ai/api/v1)"
       action={!f.canUseCustomApiKey ? <LockedTag /> : undefined}
     >
       {!f.canUseCustomApiKey ? (
@@ -579,14 +579,14 @@ function AiTab() {
             value={model}
             onChange={setModel}
             options={[
-              { value: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash" },
-              { value: "openai/gpt-4o-mini", label: "GPT-4o mini" },
-              { value: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet" },
-              { value: "meta-llama/llama-3.1-70b-instruct", label: "Llama 3.1 70B" },
+              { value: "openrouter/free", label: "OpenRouter Free (অটো রাউট)" },
+              { value: "google/gemini-2.0-flash-001:free", label: "Gemini 2.0 Flash (free)" },
+              { value: "meta-llama/llama-3.3-70b-instruct:free", label: "Llama 3.3 70B (free)" },
+              { value: "deepseek/deepseek-r1:free", label: "DeepSeek R1 (free)" },
             ]}
           />
           <button
-            className="btn-primary w-full text-xs"
+            className="btn-primary w-full text-xs disabled:cursor-not-allowed"
             disabled={apiKey.length < 8}
             onClick={() => {
               saveCustomAi(model);
@@ -596,6 +596,11 @@ function AiTab() {
           >
             সেভ করো
           </button>
+          {apiKey.length < 8 && (
+            <p className="text-center text-[10.5px] text-muted">
+              উপরে key লিখলেই বাটন চালু হবে
+            </p>
+          )}
         </div>
       )}
     </Section>
