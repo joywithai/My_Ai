@@ -82,7 +82,7 @@ export function Toggle({
         border: "none",
         flexShrink: 0,
         padding: 0,
-        background: checked ? "var(--accent, #a78bfa)" : "rgba(255,255,255,0.14)",
+        background: checked ? "var(--accent, #a78bfa)" : "rgba(255,255,255,0.30)",
         opacity: disabled ? 0.4 : 1,
         cursor: disabled ? "not-allowed" : "pointer",
         transition: "background 0.2s",

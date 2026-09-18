@@ -22,11 +22,7 @@ const IDLE: PoseMap = { ...ARMS_DOWN };
 
 /** After login — wave 👋 (optimizer-converged) */
 const GREETING: PoseMap = {
-  ...ARMS_DOWN,
-  rightUpperArm: [0, 0.7, 0.75],
-  rightLowerArm: [0.05, 0.55, -2.45],
-  rightHand: [0, 0, 0.35],
-  head: [-0.03, 0, -0.07],
+  ...ARMS_DOWN, // arms stay natural — greeting reads via head sway
 };
 
 /** Speaking — natural stance, tiny head life */

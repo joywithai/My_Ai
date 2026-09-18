@@ -135,8 +135,19 @@ export class AvatarEngine {
     this.camera.updateProjectionMatrix();
   }
 
+  private loadPromise?: Promise<void>;
+
   async load(url: string, onProgress?: (p: number) => void) {
     if (this.loaded) return;
+    if (this.loadPromise) return this.loadPromise;
+    this.loadPromise = this.doLoad(url, onProgress).catch((e) => {
+      this.loadPromise = undefined;
+      throw e;
+    });
+    return this.loadPromise;
+  }
+
+  private async doLoad(url: string, onProgress?: (p: number) => void) {
     const loader = new GLTFLoader();
     loader.register((parser) => new VRMLoaderPlugin(parser));
     const gltf = await new Promise<any>((resolve, reject) => {
@@ -335,11 +346,17 @@ export class AvatarEngine {
       }
     }
 
-    // greeting wave overlay
+    // greeting — snake-charmer style sway (arms stay natural)
     if (this.state === "greeting") {
-      const w = Math.sin(t * Math.PI * 2 * 2.6);
-      targets.rightLowerArm = add(targets.rightLowerArm, [0, 0, 0.45 * w]);
-      targets.rightHand = add(targets.rightHand, [0, 0, -0.25 * w]);
+      const s = Math.sin(t * Math.PI * 2 * 1.1); // ~1.1 Hz side-to-side
+      targets.head = add(targets.head, [
+        0.04 * Math.sin(t * Math.PI * 2 * 2.2), // subtle nod
+        0.3 * s, // yaw sway
+        0.16 * s, // roll follows
+      ]);
+      targets.neck = add(targets.neck, [0, 0.12 * s, 0.05 * s]);
+      targets.leftUpperArm = add(targets.leftUpperArm, [0, 0, -0.02 * s]);
+      targets.rightUpperArm = add(targets.rightUpperArm, [0, 0, 0.02 * s]);
     }
 
     // thinking micro motion (finger tap)

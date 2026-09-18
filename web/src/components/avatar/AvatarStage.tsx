@@ -38,10 +38,12 @@ export default function AvatarStage({
     const engine = getEngine();
     engine.mount(canvas);
     let greetTimer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false; // StrictMode double-mount guard
 
     engine
       .load("/models/avatar.vrm", setProgress)
       .then(() => {
+        if (cancelled) return;
         setReady(true);
         if (mode === "landing") {
           engine.setState("idle");
@@ -58,6 +60,7 @@ export default function AvatarStage({
       .catch((e) => console.error("VRM load failed", e));
 
     return () => {
+      cancelled = true;
       if (greetTimer) clearTimeout(greetTimer);
       engine.detach();
     };
