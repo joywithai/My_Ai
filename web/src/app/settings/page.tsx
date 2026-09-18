@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft, UserRound, Volume2, Smile, PersonStanding, Cpu,
   History as HistoryIcon, Crown, Lock, Trash2, ChevronRight, Play,
-  KeyRound, Save, RotateCcw, LogOut, Eye,
+  KeyRound, Save, RotateCcw, LogOut, Eye, Check,
 } from "lucide-react";
 import { useAuth } from "@/lib/store/auth";
 import { useSettings } from "@/lib/store/settings";
@@ -508,20 +508,70 @@ function FramingSlider({
 
 /* ───────── AI provider ───────── */
 
+type ProviderId = "gemini" | "openrouter";
+
+const AI_PROVIDERS: {
+  id: ProviderId;
+  name: string;
+  desc: string;
+  baseUrl: string;
+  models: string[];
+  keyPlaceholder: string;
+}[] = [
+  {
+    id: "gemini",
+    name: "Gemini",
+    desc: "সরাসরি Google AI Studio key",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/",
+    models: ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro", "gemini-1.5-flash"],
+    keyPlaceholder: "AIza…",
+  },
+  {
+    id: "openrouter",
+    name: "OpenRouter",
+    desc: "এক key-তে সব মডেল",
+    baseUrl: "https://openrouter.ai/api/v1/",
+    models: [
+      "openrouter/free",
+      "google/gemini-2.0-flash-001",
+      "openai/gpt-4o-mini",
+      "anthropic/claude-3.5-sonnet",
+      "meta-llama/llama-3.1-70b-instruct",
+    ],
+    keyPlaceholder: "sk-or-v1-…",
+  },
+];
+
 function AiTab() {
   const { settings, flags, saveCustomAi, removeCustomAi } = useSettings();
   const user = useAuth((s) => s.user)!;
   const showToast = useUi((s) => s.showToast);
   const f = flags[user.role];
+  const saved = settings.customAi;
+
+  const [editing, setEditing] = useState(false);
+  const [provider, setProvider] = useState<ProviderId>(saved?.provider ?? "gemini");
   const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState("google/gemini-2.0-flash-001");
+  const [model, setModel] = useState(saved?.model ?? "gemini-2.5-flash");
+  const [baseUrl, setBaseUrl] = useState(saved?.baseUrl ?? AI_PROVIDERS[0].baseUrl);
+  const [temperature, setTemperature] = useState(saved?.temperature ?? 0.7);
+  const [maxTokens, setMaxTokens] = useState(saved?.maxOutputTokens ?? 2048);
   const [testing, setTesting] = useState(false);
+
+  const pickProvider = (id: ProviderId) => {
+    setProvider(id);
+    const p = AI_PROVIDERS.find((x) => x.id === id)!;
+    setModel(p.models[0]);
+    setBaseUrl(p.baseUrl);
+  };
+
+  const showForm = !saved || editing;
 
   return (
     <Section
       icon={<Cpu size={15} />}
       title="AI প্রোভাইডার"
-      desc="নিজের OpenRouter key দিলে সেটা দিয়েই উত্তর আসবে (openrouter.ai/api/v1)"
+      desc="নিজের key দিলে সেটা দিয়েই উত্তর আসবে — দুইটার যেকোনো একটা বেছে নাও"
       action={!f.canUseCustomApiKey ? <LockedTag /> : undefined}
     >
       {!f.canUseCustomApiKey ? (
@@ -532,76 +582,143 @@ function AiTab() {
             <Crown size={13} /> আপগ্রেড করো
           </Link>
         </div>
-      ) : settings.customAi ? (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between rounded-xl border border-ok/30 bg-ok/5 px-4 py-3.5">
-            <div>
-              <p className="font-mono text-xs text-ok">{settings.customAi.maskedKey}</p>
-              <p className="mt-0.5 text-[11px] text-muted">{settings.customAi.model}</p>
-            </div>
-            <Badge tone="green">সেভ হয়ে আছে</Badge>
-          </div>
-          <div className="flex gap-2">
-            <button
-              className="btn-ghost flex-1 text-xs"
-              disabled={testing}
-              onClick={() => {
-                setTesting(true);
-                setTimeout(() => {
-                  setTesting(false);
-                  showToast("Key কাজ করছে ✅ (ডেমো)", "ok");
-                }, 900);
-              }}
-            >
-              {testing ? "টেস্ট হচ্ছে…" : "টেস্ট করো"}
-            </button>
-            <button
-              className="btn-ghost flex-1 text-xs !text-err/90"
-              onClick={() => {
-                removeCustomAi();
-                showToast("Key সরানো হয়েছে — সিস্টেম ডিফল্টে ফিরে গেছে");
-              }}
-            >
-              সরাও
-            </button>
-          </div>
-        </div>
       ) : (
-        <div className="space-y-2.5">
-          <input
-            className="input-dark font-mono text-xs"
-            placeholder="sk-or-v1-…"
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-          />
-          <Select
-            value={model}
-            onChange={setModel}
-            options={[
-              { value: "openrouter/free", label: "OpenRouter Free (অটো রাউট)" },
-              { value: "google/gemini-2.0-flash-001:free", label: "Gemini 2.0 Flash (free)" },
-              { value: "meta-llama/llama-3.3-70b-instruct:free", label: "Llama 3.3 70B (free)" },
-              { value: "deepseek/deepseek-r1:free", label: "DeepSeek R1 (free)" },
-            ]}
-          />
-          <button
-            className="btn-primary w-full text-xs disabled:cursor-not-allowed"
-            disabled={apiKey.length < 8}
-            onClick={() => {
-              saveCustomAi(model);
-              setApiKey("");
-              showToast("API key সেভ হয়েছে 🔐 (এনক্রিপ্টেড ডেমো)");
-            }}
-          >
-            সেভ করো
-          </button>
-          {apiKey.length < 8 && (
-            <p className="text-center text-[10.5px] text-muted">
-              উপরে key লিখলেই বাটন চালু হবে
-            </p>
+        <>
+          {/* provider option cards */}
+          <div className="mb-4 grid grid-cols-2 gap-2">
+            {AI_PROVIDERS.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => showForm && pickProvider(p.id)}
+                disabled={!showForm}
+                className={cn(
+                  "relative rounded-xl border p-3.5 text-left transition",
+                  provider === p.id
+                    ? "border-accent/60 bg-accent-dim shadow-[0_0_18px_rgba(167,139,250,0.12)]"
+                    : "border-line hover:border-line hover:bg-white/[0.03]",
+                  !showForm && "cursor-default"
+                )}
+              >
+                <div className="mb-1 flex items-center justify-between">
+                  <span className={cn("text-[13px] font-bold", provider === p.id ? "text-accent" : "text-txt/85")}>
+                    {p.name}
+                  </span>
+                  {provider === p.id && (
+                    <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-accent">
+                      <Check size={11} strokeWidth={3} className="text-[#16101f]" />
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10.5px] leading-relaxed text-muted">{p.desc}</p>
+                {saved?.provider === p.id && (
+                  <span className="mt-1.5 inline-block rounded-md bg-ok/15 px-1.5 py-0.5 text-[9.5px] font-semibold text-ok">
+                    সেভ হয়ে আছে
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {showForm ? (
+            <div className="space-y-2.5">
+              <div>
+                <label className="mb-1 block text-[11px] text-muted">API Key</label>
+                <input
+                  className="input-dark font-mono text-xs"
+                  placeholder={AI_PROVIDERS.find((p) => p.id === provider)!.keyPlaceholder}
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] text-muted">মডেল</label>
+                <Select
+                  value={model}
+                  onChange={setModel}
+                  options={AI_PROVIDERS.find((p) => p.id === provider)!.models.map((m) => ({ value: m, label: m }))}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] text-muted">Base URL</label>
+                <input
+                  className="input-dark font-mono text-[11px]"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="mb-1 flex justify-between text-[11px] text-muted">
+                    <span>Temperature</span>
+                    <span className="font-mono text-accent">{temperature.toFixed(1)}</span>
+                  </label>
+                  <Slider min={0} max={2} step={0.1} value={temperature} onChange={setTemperature} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] text-muted">Max Output Tokens</label>
+                  <Select
+                    value={String(maxTokens)}
+                    onChange={(v) => setMaxTokens(parseInt(v))}
+                    options={[1024, 2048, 4096, 8192].map((n) => ({ value: String(n), label: String(n) }))}
+                  />
+                </div>
+              </div>
+              <button
+                className="btn-primary w-full text-xs"
+                disabled={apiKey.length < 8}
+                onClick={() => {
+                  saveCustomAi({ provider, apiKey, model, baseUrl, temperature, maxOutputTokens: maxTokens });
+                  setApiKey("");
+                  setEditing(false);
+                  showToast("API key সেভ হয়েছে 🔐 (এনক্রিপ্টেড ডেমো)");
+                }}
+              >
+                সেভ করো
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-xl border border-ok/30 bg-ok/5 px-4 py-3.5">
+                <div>
+                  <p className="font-mono text-xs text-ok">{saved!.maskedKey}</p>
+                  <p className="mt-0.5 text-[11px] text-muted">
+                    {AI_PROVIDERS.find((p) => p.id === saved!.provider)?.name ?? saved!.provider} · {saved!.model} · temp {saved!.temperature} · {saved!.maxOutputTokens} tokens
+                  </p>
+                </div>
+                <Badge tone="green">সেভ হয়ে আছে</Badge>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  className="btn-ghost flex-1 text-xs"
+                  disabled={testing}
+                  onClick={() => {
+                    setTesting(true);
+                    setTimeout(() => {
+                      setTesting(false);
+                      showToast("Key কাজ করছে ✅ (ডেমো)", "ok");
+                    }, 900);
+                  }}
+                >
+                  {testing ? "টেস্ট হচ্ছে…" : "টেস্ট করো"}
+                </button>
+                <button className="btn-ghost flex-1 text-xs" onClick={() => setEditing(true)}>
+                  পরিবর্তন করো
+                </button>
+                <button
+                  className="btn-ghost flex-1 text-xs !text-err/90"
+                  onClick={() => {
+                    removeCustomAi();
+                    setEditing(false);
+                    showToast("Key সরানো হয়েছে — সিস্টেম ডিফল্টে ফিরে গেছে");
+                  }}
+                >
+                  সরাও
+                </button>
+              </div>
+            </div>
           )}
-        </div>
+        </>
       )}
     </Section>
   );

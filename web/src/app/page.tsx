@@ -56,8 +56,8 @@ export default function LandingPage() {
       <div className="relative my-2 mb-3 min-h-0 flex-1 overflow-hidden rounded-2xl border border-line">
         <AvatarStage mode="landing" />
 
-        {/* login / signup — top of the frame */}
-        <div className="absolute inset-x-0 top-4 z-20 flex items-center justify-center gap-2.5">
+        {/* login / signup — bottom center, on the frame */}
+        <div className="absolute inset-x-0 bottom-5 z-20 flex items-center justify-center gap-2.5">
           <Link href="/register" className="btn-ghost !px-5 !py-2.5 text-xs backdrop-blur-md">
             সাইনআপ
           </Link>

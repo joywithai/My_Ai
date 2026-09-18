@@ -2,7 +2,6 @@ export type Role = "admin" | "subscriber" | "public_user";
 
 export type AvatarStateName =
   | "loading"
-  | "shh"
   | "greeting"
   | "idle"
   | "thinking"
@@ -72,7 +71,18 @@ export interface UserSettings {
   showSubtitles: boolean;
   autoPlayAudio: boolean;
   demoVoiceOn: boolean;
-  customAi: { maskedKey: string; model: string } | null;
+  customAi: CustomAiConfig | null;
+}
+
+export type AiProvider = "gemini" | "openrouter";
+
+export interface CustomAiConfig {
+  provider: AiProvider;
+  maskedKey: string;
+  model: string;
+  baseUrl: string;
+  temperature: number;
+  maxOutputTokens: number;
 }
 
 export interface AvatarFraming {

@@ -11,7 +11,7 @@ type Mode = "landing" | "chat" | "preview";
 export const LANDING_FRAMING = {
   targetY: 1.32,
   camY: 1.36,
-  camZ: 2.28,
+  camZ: 2.15,
   fov: 33,
 };
 

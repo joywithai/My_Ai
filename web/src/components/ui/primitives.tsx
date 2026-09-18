@@ -72,17 +72,34 @@ export function Toggle({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={cn(
-        "relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200",
-        checked ? "bg-accent" : "bg-white/12",
-        disabled && "cursor-not-allowed opacity-40"
-      )}
+      style={{
+        position: "relative",
+        display: "inline-block",
+        width: 46,
+        height: 26,
+        minWidth: 46,
+        borderRadius: 9999,
+        border: "none",
+        flexShrink: 0,
+        padding: 0,
+        background: checked ? "var(--accent, #a78bfa)" : "rgba(255,255,255,0.14)",
+        opacity: disabled ? 0.4 : 1,
+        cursor: disabled ? "not-allowed" : "pointer",
+        transition: "background 0.2s",
+      }}
     >
       <span
-        className={cn(
-          "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200",
-          checked ? "translate-x-5" : "translate-x-0"
-        )}
+        style={{
+          position: "absolute",
+          top: 3,
+          left: checked ? 23 : 3,
+          width: 20,
+          height: 20,
+          borderRadius: 9999,
+          background: "#fff",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.35)",
+          transition: "left 0.2s",
+        }}
       />
     </button>
   );

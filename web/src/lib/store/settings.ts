@@ -5,6 +5,7 @@ import {
   DEFAULT_FLAGS,
   DEFAULT_SETTINGS,
   FeatureFlags,
+  AiProvider,
   PresetExpression,
   Role,
   UserSettings,
@@ -16,7 +17,14 @@ interface SettingsState {
   patch: (p: Partial<UserSettings>) => void;
   setExpression: (e: string) => void;
   toggleAnimation: (name: string) => void;
-  saveCustomAi: (model: string) => void;
+  saveCustomAi: (cfg: {
+    provider: AiProvider;
+    apiKey: string;
+    model: string;
+    baseUrl: string;
+    temperature: number;
+    maxOutputTokens: number;
+  }) => void;
   removeCustomAi: () => void;
   setFlag: (role: Role, key: keyof FeatureFlags, value: boolean | number) => void;
   resetFlags: () => void;
@@ -36,11 +44,21 @@ export const useSettings = create<SettingsState>()(
             : [...s.settings.enabledAnimations, name];
           return { settings: { ...s.settings, enabledAnimations: list } };
         }),
-      saveCustomAi: (model) =>
+      saveCustomAi: (cfg) =>
         set((s) => ({
           settings: {
             ...s.settings,
-            customAi: { maskedKey: "sk-or-...****" + Math.random().toString(36).slice(2, 6), model },
+            customAi: {
+              provider: cfg.provider,
+              maskedKey:
+                cfg.apiKey.length > 10
+                  ? cfg.apiKey.slice(0, 5) + "…" + cfg.apiKey.slice(-4)
+                  : "••••••",
+              model: cfg.model,
+              baseUrl: cfg.baseUrl,
+              temperature: cfg.temperature,
+              maxOutputTokens: cfg.maxOutputTokens,
+            },
           },
         })),
       removeCustomAi: () => set((s) => ({ settings: { ...s.settings, customAi: null } })),
@@ -50,6 +68,13 @@ export const useSettings = create<SettingsState>()(
         })),
       resetFlags: () => set({ flags: { ...DEFAULT_FLAGS } }),
     }),
-    { name: "myai.settings" }
+    {
+      name: "myai.settings",
+      version: 1,
+      migrate: () => ({
+        settings: { ...DEFAULT_SETTINGS },
+        flags: { ...DEFAULT_FLAGS },
+      }),
+    }
   )
 );

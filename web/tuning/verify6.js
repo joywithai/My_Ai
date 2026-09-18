@@ -1,4 +1,4 @@
-/* Verify round 5: no blur, buttons on frame top, fixed toggles, AI tab */
+/* Verify round 6: no-blur landing, fixed toggles, AI provider cards */
 const puppeteer = require("puppeteer-core");
 const chromium = require("@sparticuz/chromium").default;
 const fs = require("fs");
@@ -21,48 +21,48 @@ const fs = require("fs");
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 800 });
 
-  // 1. landing — clean frame, buttons at top
+  // 1. landing — no blur on hair/top
   console.log("-> landing");
   await page.goto("http://localhost:3000/", { waitUntil: "networkidle2", timeout: 60000 });
   await page.waitForFunction("window.__myaiAvatar === true", { timeout: 90000 });
-  await new Promise((r) => setTimeout(r, 2200));
-  await page.screenshot({ path: `${outDir}/r5_landing.png` });
+  await new Promise((r) => setTimeout(r, 2500));
+  await page.screenshot({ path: `${outDir}/r6_landing.png` });
 
-  // 2. settings — voice tab toggles
-  console.log("-> settings voice");
+  // login as subscriber (AI tab unlocked) -> settings AI tab
+  console.log("-> settings AI tab");
   await page.goto("http://localhost:3000/login", { waitUntil: "networkidle2" });
   await new Promise((r) => setTimeout(r, 700));
-  await page.type("input[type=email]", "admin@demo.com");
+  await page.type("input[type=email]", "sub@demo.com");
+  const roleBtns = await page.$$(".grid.grid-cols-3 button");
+  if (roleBtns[1]) await roleBtns[1].click(); // subscriber
   await page.click("button.btn-primary");
   await new Promise((r) => setTimeout(r, 1500));
+  console.log("url:", page.url());
   await page.goto("http://localhost:3000/settings", { waitUntil: "networkidle2" });
-  await new Promise((r) => setTimeout(r, 800));
-  await page.evaluate(() => {
-    const btns = [...document.querySelectorAll("aside nav button")];
-    const t = btns.find((b) => b.textContent.includes("ভয়েস"));
-    if (t) t.click();
-  });
-  await new Promise((r) => setTimeout(r, 600));
-  await page.screenshot({ path: `${outDir}/r5_voice.png` });
+  await new Promise((r) => setTimeout(r, 900));
 
-  // toggle geometry after fix
-  const geo = await page.evaluate(() => {
-    const sw = document.querySelector('button[role="switch"]');
-    const knob = sw.firstElementChild;
-    const a = sw.getBoundingClientRect();
-    const b = knob.getBoundingClientRect();
-    return { knobInside: b.left >= a.left && b.right <= a.right, knobLeft: b.left - a.left };
-  });
-  console.log("toggle geo:", JSON.stringify(geo));
-
-  // 3. AI tab
+  // AI tab
   await page.evaluate(() => {
     const btns = [...document.querySelectorAll("aside nav button")];
     const t = btns.find((b) => b.textContent.includes("AI"));
     if (t) t.click();
   });
+  await new Promise((r) => setTimeout(r, 600));
+  await page.screenshot({ path: `${outDir}/r6_ai_tab.png` });
+
+  // voice tab — toggles closeup
+  await page.evaluate(() => {
+    const btns = [...document.querySelectorAll("aside nav button")];
+    const t = btns.find((b) => b.textContent.includes("ভয়েস"));
+    if (t) t.click();
+  });
   await new Promise((r) => setTimeout(r, 500));
-  await page.screenshot({ path: `${outDir}/r5_ai_tab.png` });
+  await page.screenshot({ path: `${outDir}/r6_voice_tab.png` });
+  // zoom into toggle column
+  await page.screenshot({
+    path: `${outDir}/r6_toggles_zoom.png`,
+    clip: { x: 700, y: 130, width: 480, height: 400 },
+  });
 
   await browser.close();
   console.log("done");
